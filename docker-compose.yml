@@ -1,0 +1,25 @@
+# Docker Compose: FastAPI backend (8000) and Next.js frontend (3000) on network helical-net. Database is external (Neon) in a later milestone.
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      ENV: dev
+      LOG_LEVEL: INFO
+      BACKEND_CORS_ORIGINS: '["http://localhost:3000"]'
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      BACKEND_URL: http://backend:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+networks:
+  default:
+    name: helical-net

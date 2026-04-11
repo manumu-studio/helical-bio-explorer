@@ -1,0 +1,77 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.turbo/
+*.log
+
+# Env
+.env
+.env.local
+.env.*.local
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Private / internal (never committed)
+# Strategic build system — these files document the AI-assisted workflow
+# and would undermine the authenticity of the public repo.
+CONTINUATION_PROMPT_NEXT_SESSION.md
+DEVELOPMENT_PLAYBOOK.md
+CLAUDE.md
+.cursorrules
+
+# Internal documentation folders (strategic, prep, audit, coaching)
+docs/build-packets/
+docs/build-packet-reports/
+docs/cursor-tasks/
+docs/cursor-task-reports/
+docs/chat-sessions/
+docs/standards/
+docs/learning
+
+# Internal research artifacts (raw research output, not the public ADRs)
+docs/research/CLAUDE-RESEARCH-OUTPUT.md
+docs/research/RESEARCH-BRIEF.md
+
+# Internal interview prep (the project's passion narrative coaching script)
+docs/friend-interview/PASSION-NARRATIVE.md
+
+# Data artifacts (precomputed embeddings can be large)
+backend/data/*.parquet
+backend/data/*.h5ad
+backend/data/*.zarr
+backend/data/*.npy
+
+# Coverage
+coverage/
+.coverage
+htmlcov/
+
+# Cursor — commit `.cursor/rules/*.mdc`; ignore local skill packs (large, machine-specific)
+.cursor/skills/
