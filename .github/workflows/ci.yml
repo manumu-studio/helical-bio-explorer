@@ -19,11 +19,26 @@ jobs:
       - name: Install uv
         run: python -m pip install uv
       - name: Install backend and run checks
+        env:
+          DATABASE_URL: "postgresql+asyncpg://user:pass@localhost:5432/test"
+          DIRECT_URL: "postgresql://user:pass@localhost:5432/test"
         run: |
-          uv pip install --system -e ".[dev]"
-          ruff check .
-          mypy --strict app/
-          pytest -v
+          uv sync --frozen --extra dev
+          uv run ruff check .
+          uv run mypy --strict app/
+          uv run mypy --strict tests/
+      - name: Alembic offline SQL check
+        env:
+          DATABASE_URL: "postgresql+asyncpg://user:pass@localhost:5432/test"
+          DIRECT_URL: "postgresql://user:pass@localhost:5432/test"
+        run: |
+          uv run alembic upgrade head --sql > /tmp/migration.sql
+          wc -l /tmp/migration.sql
+      - name: Pytest
+        env:
+          DATABASE_URL: "postgresql+asyncpg://user:pass@localhost:5432/test"
+          DIRECT_URL: "postgresql://user:pass@localhost:5432/test"
+        run: uv run pytest -v
 
   frontend:
     runs-on: ubuntu-latest
@@ -40,8 +55,22 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
       - name: Install frontend and run checks
+        env:
+          DATABASE_URL: "postgresql://user:pass@localhost:5432/test"
+          DIRECT_URL: "postgresql://user:pass@localhost:5432/test"
         run: |
           pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        working-directory: frontend
+        env:
+          DATABASE_URL: "postgresql://user:pass@localhost:5432/test"
+          DIRECT_URL: "postgresql://user:pass@localhost:5432/test"
+        run: pnpm prisma generate
+      - name: Lint, typecheck, build
+        env:
+          DATABASE_URL: "postgresql://user:pass@localhost:5432/test"
+          DIRECT_URL: "postgresql://user:pass@localhost:5432/test"
+        run: |
           pnpm lint
           pnpm typecheck
           pnpm build

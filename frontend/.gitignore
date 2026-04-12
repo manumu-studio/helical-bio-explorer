@@ -1,3 +1,6 @@
 # TypeScript incremental build cache (machine-local; do not commit)
 tsconfig.tsbuildinfo
 *.tsbuildinfo
+
+node_modules/.prisma
+prisma/migrations/dev.db*

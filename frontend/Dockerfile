@@ -3,7 +3,10 @@ FROM node:20-alpine AS deps
 RUN corepack enable
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+COPY prisma ./prisma
+ENV DATABASE_URL="postgresql://user:pass@localhost:5432/dummy"
+ENV DIRECT_URL="postgresql://user:pass@localhost:5432/dummy"
+RUN pnpm install --frozen-lockfile && pnpm exec prisma generate
 
 FROM node:20-alpine AS builder
 RUN corepack enable

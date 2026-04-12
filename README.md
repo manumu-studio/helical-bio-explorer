@@ -16,9 +16,9 @@ Bio foundation models like Geneformer, scGPT and GenePT promise to do for cells 
 
 ## Status
 
-**Foundation skeleton (v0.1.0).** FastAPI `/health` plus global error handling (`app/core/errors.py`) and a Next.js home page that probes `/health` via `lib/fetcher.ts` + `HealthSchema` (server-side **`BACKEND_URL`**, not `NEXT_PUBLIC_*`). See [docs/learning/PACKET-01a-concepts.md](docs/learning/PACKET-01a-concepts.md) for the concept brief and interview drills.
+**Persistence layer (v0.2.0 in progress).** FastAPI exposes `GET /api/datasets` backed by Neon Postgres via SQLModel (asyncpg at runtime). Next.js includes a server-rendered `/datasets` page and a Prisma schema for `saved_views` only — dual-ORM bounded contexts on one database, as described in [ADR-003](docs/research/DECISIONS.md#adr-003--dual-orm-bounded-contexts-on-a-shared-postgres).
 
-Docker Compose and GitHub Actions CI are wired. The Helical SDK and database layers come in later milestones.
+The Helical SDK, S3 parquet reads, and interactive dashboard views are later milestones.
 
 See [docs/research/DECISIONS.md](docs/research/DECISIONS.md) for architecture decisions and [docs/journal/](docs/journal/) for the build log.
 
@@ -32,7 +32,41 @@ cd backend && uv venv --python 3.11 .venv && source .venv/bin/activate && uv pip
 cd frontend && corepack enable && pnpm install && pnpm dev
 ```
 
-With Docker: from the repo root, run **`./scripts/e2e-compose-smoke.sh`** — builds both images, waits for `/health`, checks the home page contains **`backend: ok`**, then runs `docker compose down`. Requires Docker Desktop (or Colima) running.
+With Docker: from the repo root, run **`./scripts/e2e-compose-smoke.sh`** — builds both images, waits for `/health`, seeds the dataset registry, asserts `/api/datasets` includes **`pbmc3k`**, checks the home page contains **`backend: ok`**, then runs `docker compose down`. Requires Docker Desktop (or Colima) running and a populated **repo-root `.env`** with Neon URLs (see Persistence layer below).
+
+### Persistence layer
+
+Neon provides one Postgres database; the backend and frontend use **different ORMs and migration tools** on non-overlapping tables (`datasets` / `precompute_runs` vs `saved_views`). See [ADR-003](docs/research/DECISIONS.md#adr-003--dual-orm-bounded-contexts-on-a-shared-postgres).
+
+1. **Environment variables**
+   - **`DATABASE_URL`** — pooled Neon connection string for **asyncpg** at runtime. Must start with `postgresql+asyncpg://`.
+   - **`DIRECT_URL`** — direct (non-pooled) Neon URL for **Alembic** and **Prisma Migrate**. Must start with `postgresql://` (no `+asyncpg`).
+   - Put the same logical pair in **repo-root `.env`** (for Compose), **`backend/.env`** (for local `uvicorn`), and **`frontend/.env.local`** (for Next.js and Prisma). Comment templates live in [`.env.example`](.env.example).
+
+2. **Backend schema (Alembic + SQLModel)**
+
+   ```bash
+   cd backend && uv sync --extra dev
+   export DATABASE_URL="postgresql+asyncpg://..." DIRECT_URL="postgresql://..."
+   uv run alembic upgrade head
+   uv run python -m app.scripts.seed_datasets
+   ```
+
+3. **Frontend schema (Prisma)**
+
+   ```bash
+   cd frontend && pnpm install
+   export DATABASE_URL="postgresql://..." DIRECT_URL="postgresql://..."
+   pnpm prisma migrate deploy
+   ```
+
+4. **Try the API locally**
+
+   ```bash
+   curl -sS http://localhost:8000/api/datasets | jq .
+   ```
+
+Runtime asyncpg uses `statement_cache_size=0` in `app/db/session.py` so Neon's PgBouncer transaction pool mode does not break prepared statements.
 
 ## Git hooks (Husky)
 
