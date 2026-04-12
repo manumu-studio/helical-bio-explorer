@@ -20,6 +20,8 @@ Bio foundation models like Geneformer, scGPT and GenePT promise to do for cells 
 
 **S3 / Parquet plumbing.** The backend includes a `ParquetStore` service that reads versioned parquet bytes from S3 first and falls back to a read-only local directory on any S3 error ([ADR-005](docs/research/DECISIONS.md#adr-005--local-parquet-fallback-for-runtime-resilience)). API routes will consume this store in a later milestone.
 
+**Precompute (v0.4.0).** The `notebooks/` folder documents how to run `precompute_reference_mapping.ipynb` on Google Colab (GPU) to generate parquet artifacts and provenance rows; see `notebooks/README.md`.
+
 The Helical SDK and interactive dashboard views are later milestones.
 
 See [docs/research/DECISIONS.md](docs/research/DECISIONS.md) for architecture decisions and [docs/journal/](docs/journal/) for the build log.
@@ -52,6 +54,7 @@ Neon provides one Postgres database; the backend and frontend use **different OR
    export DATABASE_URL="postgresql+asyncpg://..." DIRECT_URL="postgresql://..."
    uv run alembic upgrade head
    uv run python -m app.scripts.seed_datasets
+   uv run python -m app.scripts.seed_sle_dataset
    ```
 
 3. **Frontend schema (Prisma)**
