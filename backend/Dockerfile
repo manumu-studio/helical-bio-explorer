@@ -8,6 +8,7 @@ COPY app ./app
 RUN uv pip install --system --no-cache .
 
 FROM python:3.11-slim AS runtime
+ARG BAKE_PARQUET=false
 RUN groupadd --gid 1000 app && useradd --uid 1000 --gid app --create-home app
 WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
@@ -15,6 +16,10 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --chown=app:app alembic.ini ./
 COPY --chown=app:app alembic ./alembic
 COPY --chown=app:app app ./app
+COPY data/parquet /tmp/parquet-fallback/
+RUN if [ "$BAKE_PARQUET" = "true" ]; then \
+      mkdir -p /app/data/parquet && cp -a /tmp/parquet-fallback/. /app/data/parquet/; \
+    fi && rm -rf /tmp/parquet-fallback
 USER app
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

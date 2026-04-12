@@ -16,10 +16,21 @@ dependencies = [
     "asyncpg>=0.30.0",
     "alembic>=1.13.0",
     "psycopg[binary]>=3.2.0",
+    "boto3>=1.35.0",
+    "pyarrow>=17.0.0",
 ]
 
 [project.optional-dependencies]
-dev = ["httpx", "pytest", "pytest-asyncio", "ruff", "mypy", "aiosqlite>=0.20.0"]
+dev = [
+    "httpx",
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+    "mypy",
+    "aiosqlite>=0.20.0",
+    "types-boto3[s3]",
+    "moto[s3]>=5.0.0",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]

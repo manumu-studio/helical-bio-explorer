@@ -30,6 +30,15 @@ class Settings(BaseSettings):
     # DIRECT_URL: Neon direct (non-pooled) URL for Alembic / sync tools — plain postgresql://.
     direct_url: str = Field(validation_alias="DIRECT_URL")
 
+    # S3 / Parquet (ADR-005): optional bucket enables S3-first reads; None = local-only.
+    s3_bucket: str | None = Field(default=None, validation_alias="S3_BUCKET")
+    s3_region: str = Field(default="us-east-1", validation_alias="S3_REGION")
+    s3_endpoint_url: str | None = Field(default=None, validation_alias="S3_ENDPOINT_URL")
+    parquet_local_fallback_dir: str = Field(
+        default="data/parquet",
+        validation_alias="PARQUET_LOCAL_FALLBACK_DIR",
+    )
+
     @field_validator("database_url")
     @classmethod
     def validate_database_url(cls, value: str) -> str:
