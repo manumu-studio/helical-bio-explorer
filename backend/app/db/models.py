@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, Column
+from sqlalchemy import JSON, Column, DateTime
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -19,7 +19,13 @@ class Dataset(SQLModel, table=True):
     license: str
     cell_count: int = Field(ge=0)
     gene_count: int = Field(ge=0)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            default=lambda: datetime.now(UTC),
+        ),
+    )
     precompute_runs: list["PrecomputeRun"] = Relationship(back_populates="dataset")
 
 
@@ -35,5 +41,11 @@ class PrecomputeRun(SQLModel, table=True):
     parameters: dict[str, object] = Field(default_factory=dict, sa_column=Column(JSON))
     output_parquet_key: str
     git_sha: str = Field(min_length=7, max_length=40)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            default=lambda: datetime.now(UTC),
+        ),
+    )
     dataset: Dataset | None = Relationship(back_populates="precompute_runs")
