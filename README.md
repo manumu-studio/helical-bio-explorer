@@ -16,9 +16,11 @@ Bio foundation models like Geneformer, scGPT and GenePT promise to do for cells 
 
 ## Status
 
-**Persistence layer (v0.2.0 in progress).** FastAPI exposes `GET /api/datasets` backed by Neon Postgres via SQLModel (asyncpg at runtime). Next.js includes a server-rendered `/datasets` page and a Prisma schema for `saved_views` only — dual-ORM bounded contexts on one database, as described in [ADR-003](docs/research/DECISIONS.md#adr-003--dual-orm-bounded-contexts-on-a-shared-postgres).
+**Persistence layer (v0.2.0).** FastAPI exposes `GET /api/datasets` backed by Neon Postgres via SQLModel (asyncpg at runtime). Next.js includes a server-rendered `/datasets` page and a Prisma schema for `saved_views` only — dual-ORM bounded contexts on one database, as described in [ADR-003](docs/research/DECISIONS.md#adr-003--dual-orm-bounded-contexts-on-a-shared-postgres).
 
-The Helical SDK, S3 parquet reads, and interactive dashboard views are later milestones.
+**S3 / Parquet plumbing.** The backend includes a `ParquetStore` service that reads versioned parquet bytes from S3 first and falls back to a read-only local directory on any S3 error ([ADR-005](docs/research/DECISIONS.md#adr-005--local-parquet-fallback-for-runtime-resilience)). API routes will consume this store in a later milestone.
+
+The Helical SDK and interactive dashboard views are later milestones.
 
 See [docs/research/DECISIONS.md](docs/research/DECISIONS.md) for architecture decisions and [docs/journal/](docs/journal/) for the build log.
 
@@ -67,6 +69,24 @@ Neon provides one Postgres database; the backend and frontend use **different OR
    ```
 
 Runtime asyncpg uses `statement_cache_size=0` in `app/db/session.py` so Neon's PgBouncer transaction pool mode does not break prepared statements.
+
+### S3 / Parquet configuration
+
+Precomputed artifacts are stored as versioned parquet objects. The backend `ParquetStore` (see `backend/app/services/parquet_store.py`) tries S3 once per read, then falls back to the local directory below if the request fails (for example missing key, permissions, or network error). There is no retry or backoff.
+
+1. **Create an S3 bucket** (for example in the AWS console) and keep it **public-read** for the demo dataset prefix, or use private buckets with credentials appropriate to your environment. Bucket creation and IAM are outside this repo; only the read path is implemented here.
+
+2. **Environment variables** (see [`.env.example`](.env.example)):
+
+   - **`S3_BUCKET`** — Optional. When set, `ParquetStore` attempts `get_object` on `s3://{S3_BUCKET}/v{version}/{dataset_slug}/{artifact_type}.parquet`. When unset, reads use **only** the local fallback directory (useful for offline development).
+
+   - **`S3_REGION`** — AWS region for the S3 client. Defaults to `us-east-1`.
+
+   - **`S3_ENDPOINT_URL`** — Optional. Override the S3 endpoint (for example LocalStack or moto-backed tests).
+
+   - **`PARQUET_LOCAL_FALLBACK_DIR`** — Directory for fallback files at `{PARQUET_LOCAL_FALLBACK_DIR}/{dataset_slug}/{artifact_type}.parquet`. Defaults to `data/parquet` relative to the process working directory.
+
+3. **Docker production images** — To bake fallback parquet into the backend image, build with `--build-arg BAKE_PARQUET=true` from `backend/`. Default builds skip copying parquet data; see `backend/Dockerfile`.
 
 ## Git hooks (Husky)
 

@@ -7,3 +7,7 @@ __pycache__
 tests/
 *.md
 .env*
+# Exclude arbitrary local data; allow tracked data/parquet for BAKE_PARQUET image builds.
+data/
+!data/parquet/
+!data/parquet/**

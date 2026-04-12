@@ -23,6 +23,7 @@ jobs:
           DATABASE_URL: "postgresql+asyncpg://user:pass@localhost:5432/test"
           DIRECT_URL: "postgresql://user:pass@localhost:5432/test"
         run: |
+          # Dev extras include moto[s3] for ParquetStore S3 unit tests.
           uv sync --frozen --extra dev
           uv run ruff check .
           uv run mypy --strict app/
