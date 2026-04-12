@@ -24,21 +24,21 @@ jobs:
           DIRECT_URL: "postgresql://user:pass@localhost:5432/test"
         run: |
           uv sync --frozen --dev
-          ruff check .
-          mypy --strict app/
-          mypy --strict tests/
+          uv run ruff check .
+          uv run mypy --strict app/
+          uv run mypy --strict tests/
       - name: Alembic offline SQL check
         env:
           DATABASE_URL: "postgresql+asyncpg://user:pass@localhost:5432/test"
           DIRECT_URL: "postgresql://user:pass@localhost:5432/test"
         run: |
-          alembic upgrade head --sql > /tmp/migration.sql
+          uv run alembic upgrade head --sql > /tmp/migration.sql
           wc -l /tmp/migration.sql
       - name: Pytest
         env:
           DATABASE_URL: "postgresql+asyncpg://user:pass@localhost:5432/test"
           DIRECT_URL: "postgresql://user:pass@localhost:5432/test"
-        run: pytest -v
+        run: uv run pytest -v
 
   frontend:
     runs-on: ubuntu-latest
