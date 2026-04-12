@@ -37,6 +37,17 @@ curl -sf "http://localhost:8000/health" | grep -q '"status":"ok"' || {
   exit 1
 }
 
+echo "==> seed datasets (idempotent upsert)"
+docker compose exec -T backend python -m app.scripts.seed_datasets
+
+echo "==> curl backend /api/datasets (expect pbmc3k)"
+DATASETS_RESPONSE="$(curl -fsS http://localhost:8000/api/datasets)"
+echo "$DATASETS_RESPONSE"
+if ! echo "$DATASETS_RESPONSE" | grep -q '"slug":"pbmc3k"'; then
+  echo "error: /api/datasets did not return pbmc3k" >&2
+  exit 1
+fi
+
 echo "==> wait for frontend"
 for i in $(seq 1 60); do
   if curl -sf "http://localhost:3000" >/dev/null 2>&1; then

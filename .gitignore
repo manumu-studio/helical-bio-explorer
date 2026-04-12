@@ -2,6 +2,10 @@
 .DS_Store
 Thumbs.db
 
+# Local agent / editor folders (not committed)
+.claude/
+.cursor/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -73,5 +77,3 @@ coverage/
 .coverage
 htmlcov/
 
-# Cursor — commit `.cursor/rules/*.mdc`; ignore local skill packs (large, machine-specific)
-.cursor/skills/

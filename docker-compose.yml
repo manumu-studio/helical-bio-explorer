@@ -1,9 +1,11 @@
-# Docker Compose: FastAPI backend (8000) and Next.js frontend (3000) on network helical-net. Database is external (Neon) in a later milestone.
+# Docker Compose: FastAPI backend (8000) and Next.js frontend (3000) on network helical-net; Neon Postgres via .env.
 services:
   backend:
     build: ./backend
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
       ENV: dev
       LOG_LEVEL: INFO
@@ -14,8 +16,12 @@ services:
     build: ./frontend
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
       BACKEND_URL: http://backend:8000
+      # Prisma needs plain postgresql:// — override the asyncpg dialect from .env
+      DATABASE_URL: ${PRISMA_DATABASE_URL:-${DIRECT_URL}}
     depends_on:
       - backend
     restart: unless-stopped

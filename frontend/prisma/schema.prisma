@@ -1,0 +1,24 @@
+// Prisma schema — owns the saved_views table only. Backend (FastAPI + SQLModel)
+// owns datasets and precompute_runs via Alembic in a non-overlapping bounded context.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model SavedView {
+  id          String   @id @default(cuid())
+  sessionId   String   @map("session_id")
+  datasetSlug String   @map("dataset_slug")
+  filterState Json     @map("filter_state")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("saved_views")
+  @@index([sessionId])
+}

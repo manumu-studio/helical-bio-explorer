@@ -6,10 +6,20 @@ build-backend = "hatchling.build"
 name = "helical-bio-explorer-backend"
 version = "0.1.0"
 requires-python = ">=3.11,<3.12"
-dependencies = ["fastapi", "uvicorn[standard]", "pydantic>=2", "pydantic-settings"]
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic>=2",
+    "pydantic-settings",
+    "sqlmodel>=0.0.22",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "alembic>=1.13.0",
+    "psycopg[binary]>=3.2.0",
+]
 
 [project.optional-dependencies]
-dev = ["httpx", "pytest", "pytest-asyncio", "ruff", "mypy"]
+dev = ["httpx", "pytest", "pytest-asyncio", "ruff", "mypy", "aiosqlite>=0.20.0"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
@@ -21,11 +31,15 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B", "SIM"]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/conftest.py" = ["E402"]
+
 [tool.mypy]
 strict = true
 python_version = "3.11"
 disallow_any_generics = true
 warn_return_any = true
+plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
