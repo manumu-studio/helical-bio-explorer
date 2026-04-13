@@ -155,6 +155,33 @@ The following are deliberately not built. Each is a scope decision, not a deferr
 - **Postgres-specific features beyond the basics** (pgvector, LISTEN/NOTIFY, stored procedures). Keep the schema boring.
 - **tRPC, Amplify, Airflow, MLflow.** Each would add a new framework without moving a load-bearing part of the architecture forward.
 
+## ADR-008 — JSON over raw parquet for API responses
+
+### Context
+The API serves parquet artifacts to a Next.js frontend that enforces Zod validation at every fetch boundary. Two options: stream raw parquet bytes (smaller over the wire, requires `apache-arrow` JS on the client) or parse server-side and return typed JSON (larger but Zod-validatable).
+
+### Decision
+FastAPI reads parquet via PyArrow, strips embedding columns, and returns JSON arrays matching Pydantic response schemas. Large disease datasets (~276k cells) are sampled server-side to ~5,000 rows for scatter plots. A separate `/summary` endpoint returns aggregated stats computed from the full (unsampled) dataset.
+
+### Consequences
+- Frontend validates every response with Zod — no `as Type` casts, no arrow-js dependency.
+- Payloads stay under 500 KB for sampled subsets. Summary stats are tiny.
+- The server bears the parsing cost (~50 ms for 276k rows on a t3.micro). Acceptable for static data.
+- Embedding vectors (`embedding_0..N`) are never sent to the frontend — only UMAP coordinates and metadata. This saves ~90% payload size.
+
+## ADR-009 — Plotly.js for dashboard visualization
+
+### Context
+The dashboard renders 2D UMAP scatter plots (5–10k points) and grouped bar charts. Library options: Plotly.js (rich interactivity, ~3 MB bundle), deck.gl (WebGL, handles 100k+), or lightweight libraries (Recharts, Nivo).
+
+### Decision
+Use `react-plotly.js`. It handles 5–10k points comfortably, provides hover tooltips, zoom, pan, and lasso select out of the box, and has well-documented React bindings. The ~3 MB bundle is acceptable for a demo that prioritizes interactivity over load time.
+
+### Consequences
+- Rich interactivity with minimal code — hover, zoom, lasso, and built-in screenshot are free.
+- Bundle size is the cost. Could lazy-load the Plotly chunk if performance matters later.
+- If the project ever needed to render 100k+ points (full disease dataset), deck.gl would be the upgrade path. With server-side sampling at 5k, this is not needed.
+
 ## Related documents
 
 - [`DEMO-FOUNDATION.md`](./DEMO-FOUNDATION.md) — scientific framing of the reference-mapping paradigm

@@ -18,7 +18,9 @@ Bio foundation models like Geneformer, scGPT and GenePT promise to do for cells 
 
 **Persistence layer (v0.2.0).** FastAPI exposes `GET /api/datasets` backed by Neon Postgres via SQLModel (asyncpg at runtime). Next.js includes a server-rendered `/datasets` page and a Prisma schema for `saved_views` only — dual-ORM bounded contexts on one database, as described in [ADR-003](docs/research/DECISIONS.md#adr-003--dual-orm-bounded-contexts-on-a-shared-postgres).
 
-**S3 / Parquet plumbing.** The backend includes a `ParquetStore` service that reads versioned parquet bytes from S3 first and falls back to a read-only local directory on any S3 error ([ADR-005](docs/research/DECISIONS.md#adr-005--local-parquet-fallback-for-runtime-resilience)). API routes will consume this store in a later milestone.
+**S3 / Parquet plumbing.** The backend includes a `ParquetStore` service that reads versioned parquet bytes from S3 first and falls back to a read-only local directory on any S3 error ([ADR-005](docs/research/DECISIONS.md#adr-005--local-parquet-fallback-for-runtime-resilience)).
+
+**Parquet JSON API (v0.4.0).** FastAPI serves precomputed artifacts under `/api/v1` — embeddings, projections, scores, disagreement, and summary stats — with `X-Served-From: s3|local` on each response. Version selection uses the latest `precompute_runs` row per dataset. OpenAPI: `http://localhost:8000/docs` when `uvicorn` is running.
 
 The Helical SDK and interactive dashboard views are later milestones.
 
@@ -66,6 +68,8 @@ Neon provides one Postgres database; the backend and frontend use **different OR
 
    ```bash
    curl -sS http://localhost:8000/api/datasets | jq .
+   # After seeding datasets + precompute_runs and placing parquet (S3 or data/parquet):
+   curl -sS -D - http://localhost:8000/api/v1/embeddings/pbmc3k/geneformer -o /dev/null | grep -i X-Served-From
    ```
 
 Runtime asyncpg uses `statement_cache_size=0` in `app/db/session.py` so Neon's PgBouncer transaction pool mode does not break prepared statements.
@@ -112,7 +116,7 @@ Project rule for the agent: **`.cursor/rules/helical-bio-explorer.mdc`** (`alway
 
 ```
 package.json      # root: husky prepare only (pnpm)
-backend/          # FastAPI app (health, logging, error handling)
+backend/          # FastAPI app (health, datasets, /api/v1 parquet JSON API)
 frontend/         # Next.js 15 + TypeScript strict + Zod
 .husky/           # git hooks
 .cursor/rules/    # Cursor project rules (.mdc)
