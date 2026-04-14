@@ -1,0 +1,74 @@
+# Backend CD: deploy to the EC2 host via AWS SSM after Backend CI passes on main.
+# Uses GitHub OIDC → assumes an IAM role → SSM Send-Command (no SSH keys on disk).
+#
+# Required repo/environment secrets:
+#   AWS_ROLE_ARN      — IAM role trusting GitHub OIDC with ssm:SendCommand permission
+#   AWS_REGION        — e.g. us-east-1
+#   EC2_INSTANCE_ID   — i-0abc123...
+#   EC2_HOST          — api.helical.manumustudio.com (used for post-deploy health check)
+
+name: Backend Deploy
+
+on:
+  workflow_run:
+    workflows: ["Backend CI"]
+    branches: [main]
+    types: [completed]
+
+permissions:
+  id-token: write   # required for OIDC
+  contents: read
+
+jobs:
+  backend-deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy via SSM
+        id: deploy
+        env:
+          INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
+        run: |
+          # Pull latest, sync deps, run migrations, restart uvicorn.
+          # Kept as a single shell string so SSM sees one command.
+          cmd_id=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --comment "helical-api deploy ${{ github.sha }}" \
+            --parameters 'commands=[
+              "set -euo pipefail",
+              "export PATH=$HOME/.local/bin:$PATH",
+              "cd /home/ubuntu/helical-bio-explorer",
+              "sudo -u ubuntu git pull origin main",
+              "cd backend",
+              "sudo -u ubuntu bash -lc \"uv sync --frozen\"",
+              "sudo -u ubuntu bash -lc \"source .venv/bin/activate && alembic upgrade head\"",
+              "sudo systemctl restart helical-api"
+            ]' \
+            --query 'Command.CommandId' --output text)
+          echo "cmd_id=$cmd_id" >> "$GITHUB_OUTPUT"
+          aws ssm wait command-executed \
+            --command-id "$cmd_id" \
+            --instance-id "$INSTANCE_ID"
+
+      - name: Health check
+        env:
+          HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          # Give uvicorn a moment to bind before probing.
+          sleep 10
+          status=$(curl -s -o /dev/null -w "%{http_code}" "https://$HOST/health")
+          if [ "$status" != "200" ]; then
+            echo "Health check failed: HTTP $status"
+            exit 1
+          fi
+          echo "Health check OK."
