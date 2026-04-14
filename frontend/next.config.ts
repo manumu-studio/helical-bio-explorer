@@ -1,15 +1,17 @@
-// Next.js configuration: standalone output for Docker and small production images.
+// Next.js configuration.
+//
+// Deployment target is Vercel — no `output: "standalone"` (that's for Docker self-hosting,
+// and its artifact layout is not compatible with Vercel's build output contract).
 
 import path from "path";
 import { fileURLToPath } from "url";
 import type { NextConfig } from "next";
 
-// When another pnpm lockfile exists outside this app (e.g. in $HOME), Next would infer the wrong
-// workspace root for standalone output tracing; pinning the root avoids that warning and bad traces.
+// Pin the tracing root to this app to avoid monorepo-detection warnings and bad traces
+// when another pnpm lockfile exists outside this directory.
 const tracingRoot = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
-  output: "standalone",
   outputFileTracingRoot: tracingRoot,
 };
 
