@@ -1,0 +1,27 @@
+# Systemd unit for the helical-bio-explorer FastAPI backend (uvicorn).
+# Install:  sudo cp backend/systemd/helical-api.service /etc/systemd/system/
+#           sudo systemctl daemon-reload
+#           sudo systemctl enable helical-api
+# Start:    sudo systemctl start helical-api
+# Logs:     journalctl -u helical-api -f
+#
+# --workers 2 matches t3.micro (2 vCPUs). Bump on larger instances.
+# The venv is created by `uv venv` during setup-ec2.sh; uvicorn lives at .venv/bin/uvicorn.
+
+[Unit]
+Description=Helical Bio Explorer FastAPI backend
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/helical-bio-explorer/backend
+EnvironmentFile=/home/ubuntu/helical-bio-explorer/backend/.env
+ExecStart=/home/ubuntu/helical-bio-explorer/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
