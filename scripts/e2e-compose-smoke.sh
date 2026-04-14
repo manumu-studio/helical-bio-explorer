@@ -61,12 +61,18 @@ for i in $(seq 1 60); do
   sleep 1
 done
 
-echo "==> curl frontend / (expect backend: ok in HTML)"
-HTML="$(curl -sf "http://localhost:3000")"
-echo "$HTML" | grep -q "backend: ok" || {
-  echo "error: home page HTML did not contain 'backend: ok'" >&2
-  echo "--- body (first 500 chars) ---" >&2
-  echo "${HTML:0:500}" >&2
+echo "==> curl frontend / (expect redirect to /dashboard)"
+REDIR_HEADERS="$(curl -sI "http://localhost:3000/" | tr -d '\r')"
+echo "$REDIR_HEADERS"
+echo "$REDIR_HEADERS" | grep -qi "^location:.*/dashboard" || {
+  echo "error: expected / to redirect to /dashboard" >&2
+  exit 1
+}
+
+echo "==> curl frontend /dashboard (expect HTTP 200)"
+curl -sf -o /dev/null "http://localhost:3000/dashboard" || {
+  echo "error: /dashboard did not return 200" >&2
+  docker compose logs frontend >&2 || true
   exit 1
 }
 
