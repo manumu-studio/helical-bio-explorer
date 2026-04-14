@@ -12,19 +12,30 @@
   "dependencies": {
     "@prisma/client": "^6.0.0",
     "next": "^15.0.0",
+    "plotly.js": "^3.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-plotly.js": "^2.6.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
+    "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^20",
+    "@types/plotly.js": "^3.0.10",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/react-plotly.js": "^2.6.4",
     "eslint": "^9",
     "eslint-config-next": "^15.0.0",
+    "postcss": "^8.5.9",
     "prisma": "^6.0.0",
+    "tailwindcss": "^4.2.2",
     "typescript": "^5.5.0"
+  },
+  "optionalDependencies": {
+    "@tailwindcss/oxide-darwin-arm64": "4.2.2",
+    "@tailwindcss/oxide-linux-x64-gnu": "4.2.2"
   },
   "packageManager": "pnpm@9.0.0"
 }

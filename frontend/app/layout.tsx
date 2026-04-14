@@ -7,7 +7,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "helical-bio-explorer",
-  description: "Bio foundation model dashboard powered by the Helical SDK.",
+  description:
+    "Single-cell reference-mapping demo: Geneformer and GenePT embeddings on PBMC data via the Helical SDK.",
 };
 
 export default function RootLayout({
@@ -17,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="min-h-screen antialiased">{children}</body>
     </html>
   );
 }

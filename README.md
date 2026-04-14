@@ -5,7 +5,7 @@ A small web app that explores how different bio foundation models "see" single-c
 ## Stack
 
 - **Backend:** Python 3.11 + FastAPI + pytest
-- **Frontend:** Next.js 15 + React + TypeScript (Tailwind in a later UI milestone)
+- **Frontend:** Next.js 15 + React + TypeScript + Tailwind CSS v4
 - **Models:** wrapped via the open-source [Helical SDK](https://github.com/helicalAI/helical)
 - **Data:** public single-cell datasets (PBMC 3k, `yolksac_human`, CELLxGENE)
 - **Tooling:** Docker Compose, GitHub Actions, Husky (git hooks), pnpm
@@ -22,7 +22,9 @@ Bio foundation models like Geneformer, scGPT and GenePT promise to do for cells 
 
 **Parquet JSON API (v0.4.0).** FastAPI serves precomputed artifacts under `/api/v1` — embeddings, projections, scores, disagreement, and summary stats — with `X-Served-From: s3|local` on each response. Version selection uses the latest `precompute_runs` row per dataset. OpenAPI: `http://localhost:8000/docs` when `uvicorn` is running.
 
-The Helical SDK and interactive dashboard views are later milestones.
+**Dashboard (v0.5.0).** The Next.js app redirects `/` to `/dashboard`, a dark-themed tabbed UI (Plotly + Tailwind v4) that calls `/api/v1` from the browser. Set **`NEXT_PUBLIC_BACKEND_URL`** in `frontend/.env.local` to the same origin you use for the API (for example `http://localhost:8000`).
+
+The Helical SDK runs offline in precompute; the live app reads parquet-backed JSON only.
 
 See [docs/research/DECISIONS.md](docs/research/DECISIONS.md) for architecture decisions and [docs/journal/](docs/journal/) for the build log.
 
@@ -36,7 +38,7 @@ cd backend && uv venv --python 3.11 .venv && source .venv/bin/activate && uv pip
 cd frontend && corepack enable && pnpm install && pnpm dev
 ```
 
-With Docker: from the repo root, run **`./scripts/e2e-compose-smoke.sh`** — builds both images, waits for `/health`, seeds the dataset registry, asserts `/api/datasets` includes **`pbmc3k`**, checks the home page contains **`backend: ok`**, then runs `docker compose down`. Requires Docker Desktop (or Colima) running and a populated **repo-root `.env`** with Neon URLs (see Persistence layer below).
+With Docker: from the repo root, run **`./scripts/e2e-compose-smoke.sh`** — builds both images, waits for `/health`, seeds the dataset registry, asserts `/api/datasets` includes **`pbmc3k`**, checks `/` redirects to **`/dashboard`** and that **`/dashboard`** returns 200, then runs `docker compose down`. Requires Docker Desktop (or Colima) running and a populated **repo-root `.env`** with Neon URLs (see Persistence layer below).
 
 ### Persistence layer
 

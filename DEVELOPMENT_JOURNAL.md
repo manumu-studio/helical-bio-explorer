@@ -9,3 +9,4 @@ Short index of feature work. Each entry links to a journal note and, when applic
 | [Entry 03](docs/journal/ENTRY-03-persistence-layer.md) | 2026-04-12 | Persistence layer | [PR 0.2.0](docs/pull-requests/PR-0.2.0-persistence-layer.md) |
 | [Entry 04](docs/journal/ENTRY-04-s3-parquet-plumbing.md) | 2026-04-12 | S3 parquet plumbing | [PR 0.3.0](docs/pull-requests/PR-0.3.0-s3-parquet-plumbing.md) |
 | [Entry 05](docs/journal/ENTRY-05-fastapi-v1-parquet-api.md) | 2026-04-13 | FastAPI v1 parquet API | [PR 0.4.0](docs/pull-requests/PR-0.4.0-fastapi-v1-parquet-api.md) |
+| [Entry 06](docs/journal/ENTRY-06-frontend-reference-dashboard.md) | 2026-04-13 | Reference-mapping dashboard | [PR 0.5.0](docs/pull-requests/PR-0.5.0-reference-mapping-dashboard.md) |

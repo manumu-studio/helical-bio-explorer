@@ -11,7 +11,8 @@ export default async function DatasetsPage() {
 
   let data: DatasetsResponse;
   try {
-    data = await fetcher(url, DatasetsResponseSchema);
+    const result = await fetcher(url, DatasetsResponseSchema);
+    data = result.data;
   } catch (error) {
     const message = error instanceof FetchError ? error.message : "Unknown error";
     return (
