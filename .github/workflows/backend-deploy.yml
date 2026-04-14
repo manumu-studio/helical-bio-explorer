@@ -45,7 +45,7 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --comment "helical-api deploy ${{ github.sha }}" \
             --parameters 'commands=[
-              "set -euo pipefail",
+              "set -eu",
               "export PATH=$HOME/.local/bin:$PATH",
               "cd /home/ubuntu/helical-bio-explorer",
               "sudo -u ubuntu git pull origin main",
