@@ -72,6 +72,9 @@ backend/data/*.h5ad
 backend/data/*.zarr
 backend/data/*.npy
 
+# Scanpy downloads to ./data/ by default (sc.settings.datasetdir). Not tracked.
+/data/
+
 # Coverage
 coverage/
 .coverage

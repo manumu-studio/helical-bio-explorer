@@ -182,6 +182,48 @@ Use `react-plotly.js`. It handles 5–10k points comfortably, provides hover too
 - Bundle size is the cost. Could lazy-load the Plotly chunk if performance matters later.
 - If the project ever needed to render 100k+ points (full disease dataset), deck.gl would be the upgrade path. With server-side sampling at 5k, this is not needed.
 
+## ADR-010 — Disease dataset pivot: SLE → COVID (Wilk et al. 2020)
+
+### Context
+The original disease arm was Banchereau cSLE (GSE135779) — childhood-onset Systemic Lupus Erythematosus. Mid-project review surfaced three pressures against the SLE choice for a 20-minute R2 demo:
+
+1. **Dataset access friction.** GSE135779 requires GEO download + manual curation to harmonize cell-type labels with PBMC 3k. CELLxGENE Census's COVID datasets load in one line and ship with pre-harmonized labels.
+2. **Audience comprehension.** SLE is a lupus autoimmune disease — recognizable to immunologists, opaque to a mixed technical panel. COVID is universally recognized, and the immune-activation signatures in the reference mapping narrate themselves.
+3. **Scientific honesty of severity labels.** The Wilk dataset carries explicit mild/severe severity labels, which map cleanly to the `disease_activity` column the pipeline was already designed around.
+
+### Decision
+The disease arm is **Wilk et al. 2020 COVID PBMC data**, loaded via the CELLxGENE Census API. Subsampled to ~5–10k cells for demo speed. Severity labels are mapped to the existing `disease_activity` column as `"healthy" | "mild" | "severe"` to preserve schema stability with the SLE-era design.
+
+The deprecated SLE packet ([PACKET-02](../build-packets/PACKET-02-precompute-colab.md)) is marked as historical and replaced by four COVID-arm packets (02a/02b/02c/02d).
+
+### Consequences
+- Disease dataset is one Census API call away; no manual GEO curation.
+- Cell-type taxonomy aligns with PBMC 3k out of the box (minor explicit dict mapping in the notebook, no fuzzy matching).
+- The `disease_activity` column name — originally coined for SLE activity — now carries COVID severity levels. This is a semantic stretch but keeps the schema and existing API routes unchanged. Documented explicitly to avoid future confusion.
+- The scientific framing in ADR-001 (reference mapping, healthy → disease projection, per-cell distance scores, cross-model disagreement) is unaffected; only the disease dataset identity changes.
+- New dataset seed `covid_wilk` replaces the `sle_csle` seed in the `datasets` table migration.
+
+## ADR-011 — Explicit scope-outs: no Cognito, no MLflow
+
+### Context
+The Helical AI job description lists AWS Cognito as part of the expected AWS surface and MLflow as a nice-to-have for model tracking. Both are tempting to add because they would tick literal checkboxes on the JD. Neither serves the actual demo narrative, and both would eat a day of the 6-day runway.
+
+### Decision
+**No Cognito.** The project's saved-views feature (ADR-003) uses anonymous session cookies. Adding Cognito would introduce a user-pool + token-flow + protected-route surface that the demo does not need and cannot polish to a presentable standard in the remaining time. The cost of shipping Cognito badly is worse than the benefit of shipping it at all. ADR-004's "minimal AWS surface" principle applies.
+
+**No MLflow.** The project already has a reproducibility story: the `precompute_runs` table (ADR-003) records model name + version + parameters + output parquet key + git SHA per run, and the S3 parquet artifacts are immutable per version. MLflow's value kicks in at 10+ experiments, hyperparameter sweeps, and model-registry workflows — none of which the demo performs. Adopting MLflow for 2 models × 2 datasets is ceremony without signal.
+
+Both decisions are intended to be defended verbally in the interview as scope judgments, not omissions:
+> "I made a deliberate call not to add Cognito. The saved-views feature has no user accounts, and shipping auth badly is worse than not shipping it. If the project needed real user data, here's the 1-day path to add it."
+> "I didn't adopt MLflow because `precompute_runs` plus git SHA already covers reproducibility at this scale. MLflow is the right tool when you're running 10+ experiments and need a model registry — we're not."
+
+### Consequences
+- Six days stays spent on the bio/ML demo, not on auth infrastructure and MLOps ceremony.
+- The JD line items for Cognito and MLflow become *talking points* (scope defense) rather than checkboxes.
+- If feedback in the R2 interview specifically requests either, the ADRs above are the pre-rehearsed answer.
+- Frontend saved-views flow continues with anonymous session tokens only.
+- If the project ever genuinely needs Cognito, the upgrade path is Cognito anonymous identities → named account on top of the existing session-cookie flow; no blocking architectural decisions are made incompatible.
+
 ## Related documents
 
 - [`DEMO-FOUNDATION.md`](./DEMO-FOUNDATION.md) — scientific framing of the reference-mapping paradigm
