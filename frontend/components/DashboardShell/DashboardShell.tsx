@@ -8,8 +8,6 @@ import type { DashboardShellProps, DashboardTabId } from "@/components/Dashboard
 const TABS: { id: DashboardTabId; label: string }[] = [
   { id: "reference", label: "Reference" },
   { id: "projection", label: "Projection" },
-  { id: "distance", label: "Distance" },
-  { id: "disagreement", label: "Disagreement" },
 ];
 
 export function DashboardShell({ activeTab, onTabChange, source, children }: DashboardShellProps) {

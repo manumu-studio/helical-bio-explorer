@@ -11,8 +11,15 @@ import { useProjectionView } from "@/components/ProjectionView/useProjectionView
 import { UmapScatter } from "@/components/UmapScatter";
 
 const HEALTHY_GREY = "#94a3b8";
-const HIGH_COLOR = "#f87171";
-const LOW_COLOR = "#60a5fa";
+const SEVERE_COLOR = "#f87171";
+const MILD_COLOR = "#fbbf24";
+const HEALTHY_COLOR = "#60a5fa";
+
+function severityColor(activity: string): string {
+  if (activity === "severe") return SEVERE_COLOR;
+  if (activity === "mild") return MILD_COLOR;
+  return HEALTHY_COLOR;
+}
 
 export function ProjectionView({ onSourceChange }: ProjectionViewProps) {
   const {
@@ -47,12 +54,12 @@ export function ProjectionView({ onSourceChange }: ProjectionViewProps) {
       out.push({
         type: "scattergl",
         mode: "markers",
-        name: "Disease (cSLE)",
+        name: "COVID (Wilk)",
         x: cells.map((c) => c.umap_1),
         y: cells.map((c) => c.umap_2),
         marker: {
           size: 7,
-          color: cells.map((c) => (c.disease_activity === "high" ? HIGH_COLOR : LOW_COLOR)),
+          color: cells.map((c) => severityColor(c.disease_activity)),
         },
         customdata: cells.map(
           (c) =>
@@ -80,7 +87,7 @@ export function ProjectionView({ onSourceChange }: ProjectionViewProps) {
         {!loading && error === null && healthyData !== null && diseaseData !== null ? (
           <UmapScatter
             traces={traces}
-            title={`Disease projection — ${diseaseData.model}`}
+            title={`COVID projection — ${diseaseData.model}`}
             xLabel="UMAP 1"
             yLabel="UMAP 2"
           />
@@ -100,18 +107,58 @@ export function ProjectionView({ onSourceChange }: ProjectionViewProps) {
         />
         {diseaseData !== null ? (
           <div
-            className="rounded-lg border border-slate-700 p-4 text-sm text-slate-200"
+            className="flex flex-col gap-3 rounded-lg border border-slate-700 p-4 text-sm text-slate-200"
             style={{ backgroundColor: "var(--color-surface)" }}
           >
-            <p className="mb-2 font-medium text-slate-100">Stats</p>
-            <ul className="space-y-1 text-slate-300">
-              <li>Total disease cells: {diseaseData.total_cells.toLocaleString()}</li>
-              <li>Sampled: {diseaseData.sampled.toLocaleString()}</li>
-              <li>
-                Filters: model {diseaseData.model}, cell type {selectedCellType}, activity{" "}
-                {diseaseActivity}
-              </li>
-            </ul>
+            <div>
+              <p className="mb-2 font-medium text-slate-100">Dataset</p>
+              <p className="text-xs text-slate-400">
+                Wilk et al. 2020 · PBMCs · CELLxGENE Census
+              </p>
+            </div>
+            <div>
+              <p className="mb-2 font-medium text-slate-100">Severity</p>
+              <ul className="space-y-1 text-xs text-slate-300">
+                <li className="flex items-center gap-2">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: SEVERE_COLOR }}
+                  />
+                  Severe
+                </li>
+                <li className="flex items-center gap-2">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: MILD_COLOR }}
+                  />
+                  Mild
+                </li>
+                <li className="flex items-center gap-2">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: HEALTHY_COLOR }}
+                  />
+                  Healthy control
+                </li>
+                <li className="flex items-center gap-2">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: HEALTHY_GREY }}
+                  />
+                  PBMC 3k reference
+                </li>
+              </ul>
+            </div>
+            <div>
+              <p className="mb-2 font-medium text-slate-100">Stats</p>
+              <ul className="space-y-1 text-slate-300">
+                <li>Total cells: {diseaseData.total_cells.toLocaleString()}</li>
+                <li>Sampled: {diseaseData.sampled.toLocaleString()}</li>
+                <li>
+                  Filters: {diseaseData.model} · {selectedCellType} · {diseaseActivity}
+                </li>
+              </ul>
+            </div>
           </div>
         ) : null}
       </div>

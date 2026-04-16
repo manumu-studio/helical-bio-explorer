@@ -11,8 +11,9 @@ const MODELS = [
 
 const DISEASE_OPTIONS = [
   { id: "All", label: "All" },
-  { id: "low", label: "Low" },
-  { id: "high", label: "High" },
+  { id: "healthy", label: "Healthy" },
+  { id: "mild", label: "Mild" },
+  { id: "severe", label: "Severe" },
 ] as const;
 
 export function FilterPanel({

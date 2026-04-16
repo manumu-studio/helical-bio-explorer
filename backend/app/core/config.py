@@ -25,6 +25,10 @@ class Settings(BaseSettings):
         default_factory=lambda: ["http://localhost:3000"],
         validation_alias="BACKEND_CORS_ORIGINS",
     )
+    backend_cors_origin_regex: str | None = Field(
+        default=None,
+        validation_alias="BACKEND_CORS_ORIGIN_REGEX",
+    )
     # DATABASE_URL: Neon pooled endpoint for runtime asyncpg (must include +asyncpg dialect).
     database_url: str = Field(validation_alias="DATABASE_URL")
     # DIRECT_URL: Neon direct (non-pooled) URL for Alembic / sync tools — plain postgresql://.
