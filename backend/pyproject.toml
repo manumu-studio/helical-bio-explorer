@@ -30,6 +30,11 @@ dev = [
     "aiosqlite>=0.20.0",
     "types-boto3[s3]",
     "moto[s3]>=5.0.0",
+    "scanpy>=1.10,<1.11",
+    "pandas>=2.2,<3.0",
+    "numpy>=1.26,<2.0",
+    "anndata>=0.10",
+    "pandas-stubs>=2.2,<3",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -51,6 +56,15 @@ python_version = "3.11"
 disallow_any_generics = true
 warn_return_any = true
 plugins = ["pydantic.mypy"]
+files = ["app", "tests", "../scripts/generate_pbmc_baseline_parquet.py"]
+
+[[tool.mypy.overrides]]
+module = ["scanpy.*", "anndata.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pyarrow.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
