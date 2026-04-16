@@ -52,6 +52,7 @@ jobs:
               "cd backend",
               "sudo -u ubuntu bash -lc \"uv sync --frozen\"",
               "sudo -u ubuntu bash -lc \"source .venv/bin/activate && alembic upgrade head\"",
+              "bash /home/ubuntu/helical-bio-explorer/backend/scripts/ensure-prod-env.sh",
               "sudo systemctl restart helical-api"
             ]' \
             --query 'Command.CommandId' --output text)
