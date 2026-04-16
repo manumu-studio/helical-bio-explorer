@@ -68,7 +68,6 @@ def test_parquet_shape_and_columns(tmp_path: Path) -> None:
         assert bool((col == 0.0).all()) is True
 
 
-@pytest.mark.asyncio
 async def test_precompute_run_row_written(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
