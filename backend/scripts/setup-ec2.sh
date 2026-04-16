@@ -87,7 +87,7 @@ DATABASE_URL=postgresql+asyncpg://USER:PASS@HOST/DB?sslmode=require
 DIRECT_URL=postgresql://USER:PASS@HOST/DB?sslmode=require
 
 # Frontend origins allowed to hit this API (JSON array — pydantic-settings parses it).
-BACKEND_CORS_ORIGINS=["https://helical.manumustudio.com"]
+BACKEND_CORS_ORIGINS=["https://helical.manumustudio.com","https://helical-bio-explorer.vercel.app"]
 
 # Parquet storage — leave S3_BUCKET unset to rely on the local fallback baked into the repo.
 # S3_BUCKET=helical-bio-explorer-artifacts
