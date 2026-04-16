@@ -47,7 +47,7 @@ export function useProjectionView(onSourceChange?: (source: FetchSource) => void
         if (diseaseActivity !== "All") {
           params.set("disease_activity", diseaseActivity);
         }
-        const diseaseUrl = `${base}/api/v1/projections/sle_csle/${modelName}?${params.toString()}`;
+        const diseaseUrl = `${base}/api/v1/projections/covid_wilk/${modelName}?${params.toString()}`;
         const [healthyResult, diseaseResult] = await Promise.all([
           fetcher(healthyUrl, EmbeddingResponseSchema),
           fetcher(diseaseUrl, ProjectionResponseSchema),
