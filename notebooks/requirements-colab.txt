@@ -1,4 +1,5 @@
-# Pinned deps for precompute_pbmc_mvp.ipynb and precompute_covid_projection.ipynb
+# Pinned deps for precompute_pbmc_mvp.ipynb, precompute_covid_projection.ipynb, and
+# precompute_genept_disagreement.ipynb (GenePT + disagreement — same numpy 1.x pins).
 # Colab T4 GPU runtime. numpy 1.x strategy — helical 0.0.1a* strict-pins numpy==1.26.4, scipy==1.13.1,
 # pandas==2.2.2, torch==2.6.0. These pins are NOT optional; PACKET-02b embeddings on S3 were
 # generated under them, so COVID projection must match for embedding-space consistency.

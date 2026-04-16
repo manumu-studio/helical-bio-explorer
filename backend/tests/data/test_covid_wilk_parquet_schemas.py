@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
-import pandas as pd
 import pyarrow.parquet as pq
 import pytest
 
@@ -23,11 +22,32 @@ def _sample_rows(path: Path, n: int = 100) -> list[dict[str, Any]]:
 
 @pytest.mark.parametrize(
     "file_name",
-    ["geneformer_embeddings.parquet", "geneformer_projected.parquet", "distance_scores.parquet"],
+    [
+        "geneformer_embeddings.parquet",
+        "geneformer_projected.parquet",
+        "distance_scores.parquet",
+    ],
 )
 def test_covid_parquet_files_exist(file_name: str) -> None:
     p = _DATA_DIR / file_name
     assert p.is_file(), f"missing {p}"
+
+
+# GenePT-side files land in PR-0.10.1 after the Colab run; this is a soft check that
+# skips cleanly until then so the pre-GenePT build stays green.
+@pytest.mark.parametrize(
+    "file_name",
+    [
+        "genept_embeddings.parquet",
+        "genept_projected.parquet",
+        "cross_model_disagreement.parquet",
+    ],
+)
+def test_covid_genept_files_present_when_available(file_name: str) -> None:
+    p = _DATA_DIR / file_name
+    if not p.is_file():
+        pytest.skip(f"{file_name} pending Colab GenePT run")
+    assert p.stat().st_size > 0
 
 
 def test_embeddings_rows_match_cell_point() -> None:
@@ -60,22 +80,20 @@ def test_projected_rows_match_projected_cell() -> None:
         )
 
 
-def test_scores_rows_allow_nan_genept() -> None:
+def test_scores_rows_validate_regardless_of_genept_fill() -> None:
+    """CellScore validates whether `distance_genept` is NaN (pre-GenePT run) or filled (post)."""
+
     path = _DATA_DIR / "distance_scores.parquet"
-    table = pq.read_table(path)
-    df = table.to_pandas()
-    assert df["distance_genept"].isna().all()
+    df = pq.read_table(path).to_pandas()
 
     for row in df.head(100).to_dict(orient="records"):
-        gpt = row["distance_genept"]
-        val = float("nan") if pd.isna(gpt) else float(gpt)
         CellScore.model_validate(
             {
                 "cell_id": row["cell_id"],
                 "cell_type": row["cell_type"],
                 "disease_activity": row["disease_activity"],
                 "distance_geneformer": float(row["distance_geneformer"]),
-                "distance_genept": val,
+                "distance_genept": float(row["distance_genept"]),
             }
         )
 

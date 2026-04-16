@@ -90,3 +90,39 @@ cp /tmp/{geneformer_embeddings,geneformer_projected,distance_scores}.parquet bac
 ```
 
 **Note:** The FastAPI artifact name for scores is `distance_scores.parquet` (not `scores.parquet`).
+
+---
+
+## `precompute_genept_disagreement.ipynb`
+
+GenePT arm + **cross-model disagreement**: embed PBMC3k and the same Wilk COVID subsample as PACKET-02c (join on `cell_id` from `distance_scores.parquet`), refit UMAP in GenePT space, score per-cell `distance_to_healthy`, then percentile-rank both models’ distances and export `abs(rank_gf − rank_gp)` as `disagreement`. Rewrites `distance_scores.parquet` in place (fills `distance_genept`) and uploads `cross_model_disagreement.parquet` (that is the runtime artifact name the API expects — not `disagreement.parquet`).
+
+### Runtime
+
+- **Environment:** Colab **T4 GPU**
+- **Wall time:** ~45 minutes
+- **Pins:** same numpy 1.26.x / scipy 1.13.x strategy as `precompute_covid_projection.ipynb`
+
+### Post-run (local fallback — ships in PR-0.10.1)
+
+Once the Colab run uploads artifacts to S3:
+
+```bash
+mkdir -p backend/data/parquet/{pbmc3k,covid_wilk}
+aws s3 cp s3://$S3_BUCKET/v1/pbmc3k/genept_embeddings.parquet             backend/data/parquet/pbmc3k/
+aws s3 cp s3://$S3_BUCKET/v1/covid_wilk/genept_embeddings.parquet         backend/data/parquet/covid_wilk/
+aws s3 cp s3://$S3_BUCKET/v1/covid_wilk/genept_projected.parquet          backend/data/parquet/covid_wilk/
+aws s3 cp s3://$S3_BUCKET/v1/covid_wilk/cross_model_disagreement.parquet  backend/data/parquet/covid_wilk/
+aws s3 cp s3://$S3_BUCKET/v1/covid_wilk/distance_scores.parquet           backend/data/parquet/covid_wilk/   # in-place rewrite
+```
+
+Then re-enable the **Distance** and **Disagreement** tabs in `frontend/components/DashboardShell/DashboardShell.tsx` (hidden in PR-0.10.0 until real data lands).
+
+If `du -sh backend/data/parquet/` exceeds the demo budget, you may drop `embedding_*` columns from the **`genept_projected.parquet` local fallback only** (not from S3, not from the embeddings parquets).
+
+### Verification invariants (cell 22)
+
+- `embedding_*` column count equals `D` from the SDK, and `D ≥ 256` (real GenePT is high-dimensional).
+- `pearson(distance_geneformer, distance_genept) < 0.95` — if it's higher, the two embedding spaces collapsed into the same geometry and disagreement is meaningless.
+- `distance_genept`, `disagreement`, `distance_to_healthy` have no NaN.
+- Cell 23 asserts HTTP 200 + non-empty bodies on `/disagreement`, `/summary`, `/scores`.
