@@ -2,35 +2,29 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import type { DisagreementViewState } from "@/components/DisagreementView/DisagreementView.types";
 import { getClientBackendBaseUrl } from "@/lib/backend-url";
-import { FetchError, fetcher, type FetchSource } from "@/lib/fetcher";
-import {
-  DisagreementResponseSchema,
-  type DisagreementResponse,
-} from "@/lib/schemas/disagreement";
+import { FetchError, type FetchSource } from "@/lib/fetcher";
+import { fetchJsonOrNotFound } from "@/lib/fetchJson";
+import { DisagreementResponseSchema } from "@/lib/schemas/disagreement";
 
 export function useDisagreementView(onSourceChange?: (source: FetchSource) => void) {
   const [selectedCellType, setSelectedCellType] = useState("All");
   const [diseaseActivity, setDiseaseActivity] = useState("All");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<DisagreementResponse | null>(null);
-  const [source, setSource] = useState<FetchSource>("unknown");
+  const [viewState, setViewState] = useState<DisagreementViewState>({ status: "loading" });
   const [cellTypeCatalog, setCellTypeCatalog] = useState<string[]>([]);
 
   const onSourceChangeRef = useRef(onSourceChange);
   onSourceChangeRef.current = onSourceChange;
 
   const reportSource = useCallback((next: FetchSource) => {
-    setSource(next);
     onSourceChangeRef.current?.(next);
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      setLoading(true);
-      setError(null);
+      setViewState({ status: "loading" });
       try {
         const base = getClientBackendBaseUrl();
         const params = new URLSearchParams();
@@ -42,11 +36,20 @@ export function useDisagreementView(onSourceChange?: (source: FetchSource) => vo
           params.set("disease_activity", diseaseActivity);
         }
         const url = `${base}/api/v1/disagreement/covid_wilk?${params.toString()}`;
-        const result = await fetcher(url, DisagreementResponseSchema);
+        const result = await fetchJsonOrNotFound(url, DisagreementResponseSchema);
         if (cancelled) {
           return;
         }
-        setData(result.data);
+        if (result.status === "not_found") {
+          setViewState({ status: "not_found" });
+          reportSource("unknown");
+          return;
+        }
+        setViewState({
+          status: "ready",
+          data: result.data,
+          source: result.source,
+        });
         reportSource(result.source);
         if (selectedCellType === "All" && diseaseActivity === "All") {
           const unique = Array.from(new Set(result.data.cells.map((c) => c.cell_type))).sort((a, b) =>
@@ -59,13 +62,8 @@ export function useDisagreementView(onSourceChange?: (source: FetchSource) => vo
           return;
         }
         const message = e instanceof FetchError ? e.message : "Failed to load disagreement data";
-        setError(message);
-        setData(null);
+        setViewState({ status: "error", message });
         reportSource("unknown");
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
       }
     }
     void load();
@@ -73,6 +71,8 @@ export function useDisagreementView(onSourceChange?: (source: FetchSource) => vo
       cancelled = true;
     };
   }, [diseaseActivity, reportSource, selectedCellType]);
+
+  const data = viewState.status === "ready" ? viewState.data : null;
 
   const cellTypes = useMemo(() => {
     if (cellTypeCatalog.length > 0) {
@@ -90,10 +90,8 @@ export function useDisagreementView(onSourceChange?: (source: FetchSource) => vo
     setSelectedCellType,
     diseaseActivity,
     setDiseaseActivity,
-    loading,
-    error,
+    viewState,
     data,
-    source,
     cellTypes,
   };
 }

@@ -5,25 +5,25 @@
 import { useMemo } from "react";
 import type { Data } from "plotly.js";
 
+import { ChartSkeleton } from "@/components/ChartSkeleton";
+import { DashboardEmptyState } from "@/components/DashboardEmptyState";
 import { FilterPanel } from "@/components/FilterPanel";
 import type { ReferenceViewProps } from "@/components/ReferenceView/ReferenceView.types";
 import { useReferenceView } from "@/components/ReferenceView/useReferenceView";
 import { UmapScatter } from "@/components/UmapScatter";
 import { getCellColor } from "@/lib/constants/cell-colors";
 
-export function ReferenceView({ onSourceChange }: ReferenceViewProps) {
+export function ReferenceView({ onSourceChange, modelName, onModelNameChange }: ReferenceViewProps) {
   const {
-    modelName,
     setModelName,
     selectedCellType,
     setSelectedCellType,
-    loading,
-    error,
+    viewState,
     data,
     cellTypes,
     filteredCells,
     cellTypeCount,
-  } = useReferenceView(onSourceChange);
+  } = useReferenceView(onSourceChange, modelName, onModelNameChange);
 
   const traces: Data[] = useMemo(() => {
     if (filteredCells.length === 0) {
@@ -49,17 +49,16 @@ export function ReferenceView({ onSourceChange }: ReferenceViewProps) {
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
       <div className="min-w-0">
-        {loading ? (
-          <div className="flex h-[520px] items-center justify-center rounded-lg border border-slate-700 bg-slate-900/40 text-slate-400">
-            Loading…
-          </div>
-        ) : null}
-        {error !== null && !loading ? (
+        {viewState.status === "loading" ? <ChartSkeleton variant="umap" /> : null}
+        {viewState.status === "error" ? (
           <div className="rounded-lg border border-red-900/60 bg-red-950/40 p-4 text-sm text-red-200">
-            {error}
+            {viewState.message}
           </div>
         ) : null}
-        {!loading && error === null && data !== null ? (
+        {viewState.status === "not_found" ? (
+          <DashboardEmptyState viewName="Reference" dataset="pbmc3k" model={modelName} />
+        ) : null}
+        {viewState.status === "ready" && data !== null ? (
           <UmapScatter
             traces={traces}
             title={`Healthy reference (PBMC 3k) — ${data.model}`}
