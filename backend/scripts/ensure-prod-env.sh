@@ -27,4 +27,12 @@ if grep -q '^BACKEND_CORS_ORIGIN_REGEX=' "$ENV_FILE"; then
 fi
 echo "$REGEX_LINE" | sudo -u ubuntu tee -a "$ENV_FILE" > /dev/null
 
-echo ">>> Enforced BACKEND_CORS_ORIGINS + BACKEND_CORS_ORIGIN_REGEX in $ENV_FILE"
+# Ensure S3 parquet bucket is configured (ADR-005).
+S3_LINE='S3_BUCKET=helical-bio-explorer-artifacts'
+if grep -q '^S3_BUCKET=' "$ENV_FILE"; then
+    sudo -u ubuntu sed -i "s|^S3_BUCKET=.*|$S3_LINE|" "$ENV_FILE"
+else
+    echo "$S3_LINE" | sudo -u ubuntu tee -a "$ENV_FILE" > /dev/null
+fi
+
+echo ">>> Enforced BACKEND_CORS_ORIGINS + BACKEND_CORS_ORIGIN_REGEX + S3_BUCKET in $ENV_FILE"
