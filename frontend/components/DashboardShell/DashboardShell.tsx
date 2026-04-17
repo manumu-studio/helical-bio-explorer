@@ -5,10 +5,11 @@
 import { ProvenanceChip } from "@/components/ProvenanceChip";
 import type { DashboardShellProps, DashboardTabId } from "@/components/DashboardShell/DashboardShell.types";
 
-// Distance and Disagreement tabs re-enable in PR-0.10.1 once real GenePT parquets land from Colab.
 const TABS: { id: DashboardTabId; label: string }[] = [
   { id: "reference", label: "Reference" },
   { id: "projection", label: "Projection" },
+  { id: "distance", label: "Distance" },
+  { id: "disagreement", label: "Disagreement" },
 ];
 
 export function DashboardShell({ activeTab, onTabChange, source, children }: DashboardShellProps) {

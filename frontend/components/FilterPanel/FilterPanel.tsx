@@ -4,9 +4,9 @@
 
 import type { FilterPanelProps } from "@/components/FilterPanel/FilterPanel.types";
 
-// GenePT toggle re-enables in PR-0.10.1 once real GenePT parquets land from Colab.
 const MODELS = [
   { id: "geneformer", label: "Geneformer" },
+  { id: "genept", label: "GenePT" },
 ] as const;
 
 const DISEASE_OPTIONS = [
