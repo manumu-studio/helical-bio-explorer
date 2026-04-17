@@ -2,10 +2,11 @@
 
 from fastapi import APIRouter
 
-from app.api.v1 import disagreement, embeddings, scores, summary
+from app.api.v1 import disagreement, embeddings, provenance, scores, summary
 
 router = APIRouter()
 router.include_router(embeddings.router)
 router.include_router(scores.router)
 router.include_router(disagreement.router)
 router.include_router(summary.router)
+router.include_router(provenance.router)

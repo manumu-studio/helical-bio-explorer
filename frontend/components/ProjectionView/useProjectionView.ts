@@ -2,40 +2,33 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import type { ProjectionViewState } from "@/components/ProjectionView/ProjectionView.types";
 import { getClientBackendBaseUrl } from "@/lib/backend-url";
-import { FetchError, fetcher, type FetchSource } from "@/lib/fetcher";
-import {
-  EmbeddingResponseSchema,
-  type EmbeddingResponse,
-} from "@/lib/schemas/embeddings";
-import {
-  ProjectionResponseSchema,
-  type ProjectionResponse,
-} from "@/lib/schemas/projections";
+import { FetchError, type FetchSource } from "@/lib/fetcher";
+import { fetchJsonOrNotFound } from "@/lib/fetchJson";
+import { EmbeddingResponseSchema } from "@/lib/schemas/embeddings";
+import { ProjectionResponseSchema } from "@/lib/schemas/projections";
 
-export function useProjectionView(onSourceChange?: (source: FetchSource) => void) {
-  const [modelName, setModelName] = useState("geneformer");
+export function useProjectionView(
+  onSourceChange: ((source: FetchSource) => void) | undefined,
+  modelName: string,
+  onModelNameChange: (name: string) => void,
+) {
   const [selectedCellType, setSelectedCellType] = useState("All");
   const [diseaseActivity, setDiseaseActivity] = useState("All");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [healthyData, setHealthyData] = useState<EmbeddingResponse | null>(null);
-  const [diseaseData, setDiseaseData] = useState<ProjectionResponse | null>(null);
-  const [source, setSource] = useState<FetchSource>("unknown");
+  const [viewState, setViewState] = useState<ProjectionViewState>({ status: "loading" });
 
   const onSourceChangeRef = useRef(onSourceChange);
   onSourceChangeRef.current = onSourceChange;
 
   const reportSource = useCallback((next: FetchSource) => {
-    setSource(next);
     onSourceChangeRef.current?.(next);
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      setLoading(true);
-      setError(null);
+      setViewState({ status: "loading" });
       try {
         const base = getClientBackendBaseUrl();
         const healthyUrl = `${base}/api/v1/embeddings/pbmc3k/${modelName}?sample_size=5000`;
@@ -49,28 +42,31 @@ export function useProjectionView(onSourceChange?: (source: FetchSource) => void
         }
         const diseaseUrl = `${base}/api/v1/projections/covid_wilk/${modelName}?${params.toString()}`;
         const [healthyResult, diseaseResult] = await Promise.all([
-          fetcher(healthyUrl, EmbeddingResponseSchema),
-          fetcher(diseaseUrl, ProjectionResponseSchema),
+          fetchJsonOrNotFound(healthyUrl, EmbeddingResponseSchema),
+          fetchJsonOrNotFound(diseaseUrl, ProjectionResponseSchema),
         ]);
         if (cancelled) {
           return;
         }
-        setHealthyData(healthyResult.data);
-        setDiseaseData(diseaseResult.data);
+        if (healthyResult.status === "not_found" || diseaseResult.status === "not_found") {
+          setViewState({ status: "not_found" });
+          reportSource("unknown");
+          return;
+        }
+        setViewState({
+          status: "ready",
+          healthyData: healthyResult.data,
+          diseaseData: diseaseResult.data,
+          source: diseaseResult.source,
+        });
         reportSource(diseaseResult.source);
       } catch (e: unknown) {
         if (cancelled) {
           return;
         }
         const message = e instanceof FetchError ? e.message : "Failed to load projections";
-        setError(message);
-        setHealthyData(null);
-        setDiseaseData(null);
+        setViewState({ status: "error", message });
         reportSource("unknown");
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
       }
     }
     void load();
@@ -78,6 +74,9 @@ export function useProjectionView(onSourceChange?: (source: FetchSource) => void
       cancelled = true;
     };
   }, [diseaseActivity, modelName, reportSource, selectedCellType]);
+
+  const healthyData = viewState.status === "ready" ? viewState.healthyData : null;
+  const diseaseData = viewState.status === "ready" ? viewState.diseaseData : null;
 
   const cellTypes = useMemo(() => {
     const unique = new Set<string>();
@@ -92,16 +91,14 @@ export function useProjectionView(onSourceChange?: (source: FetchSource) => void
 
   return {
     modelName,
-    setModelName,
+    setModelName: onModelNameChange,
     selectedCellType,
     setSelectedCellType,
     diseaseActivity,
     setDiseaseActivity,
-    loading,
-    error,
+    viewState,
     healthyData,
     diseaseData,
-    source,
     cellTypes,
   };
 }

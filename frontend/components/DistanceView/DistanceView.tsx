@@ -7,6 +7,8 @@ import { useMemo } from "react";
 import type { ComponentProps } from "react";
 import type { Data, Layout } from "plotly.js";
 
+import { ChartSkeleton } from "@/components/ChartSkeleton";
+import { DashboardEmptyState } from "@/components/DashboardEmptyState";
 import { FilterPanel } from "@/components/FilterPanel";
 import type { DistanceViewProps } from "@/components/DistanceView/DistanceView.types";
 import { useDistanceView } from "@/components/DistanceView/useDistanceView";
@@ -53,8 +55,7 @@ export function DistanceView({ onSourceChange }: DistanceViewProps) {
   const {
     selectedCellType,
     setSelectedCellType,
-    loading,
-    error,
+    viewState,
     scoresData,
     cellTypes,
     filteredGroups,
@@ -201,22 +202,26 @@ export function DistanceView({ onSourceChange }: DistanceViewProps) {
     displaylogo: false,
   };
 
-  const ready = !loading && error === null && scoresData !== null;
+  const ready = viewState.status === "ready" && scoresData !== null;
   const showBar = ready && barData.categories.length > 0;
   const showScatter = ready && filteredScoreCells.length > 0;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
       <div className="flex min-w-0 flex-col gap-8">
-        {loading ? (
-          <div className="flex h-64 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/40 text-slate-400">
-            Loading…
+        {viewState.status === "loading" ? (
+          <>
+            <ChartSkeleton variant="bar" />
+            <ChartSkeleton variant="bar" />
+          </>
+        ) : null}
+        {viewState.status === "error" ? (
+          <div className="rounded-lg border border-red-900/60 bg-red-950/40 p-4 text-sm text-red-200">
+            {viewState.message}
           </div>
         ) : null}
-        {error !== null && !loading ? (
-          <div className="rounded-lg border border-red-900/60 bg-red-950/40 p-4 text-sm text-red-200">
-            {error}
-          </div>
+        {viewState.status === "not_found" ? (
+          <DashboardEmptyState viewName="Distance" dataset="covid_wilk" model="geneformer × genept" />
         ) : null}
 
         {showBar ? (

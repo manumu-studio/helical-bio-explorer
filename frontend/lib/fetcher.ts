@@ -16,7 +16,7 @@ export interface FetchResult<T> {
   source: FetchSource;
 }
 
-function parseServedFromHeader(raw: string | null): FetchSource {
+export function parseServedFromHeader(raw: string | null): FetchSource {
   if (raw === null) {
     return "unknown";
   }

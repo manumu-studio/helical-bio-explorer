@@ -5,6 +5,8 @@
 import { useMemo } from "react";
 import type { Data } from "plotly.js";
 
+import { ChartSkeleton } from "@/components/ChartSkeleton";
+import { DashboardEmptyState } from "@/components/DashboardEmptyState";
 import { FilterPanel } from "@/components/FilterPanel";
 import type { ProjectionViewProps } from "@/components/ProjectionView/ProjectionView.types";
 import { useProjectionView } from "@/components/ProjectionView/useProjectionView";
@@ -21,20 +23,18 @@ function severityColor(activity: string): string {
   return HEALTHY_COLOR;
 }
 
-export function ProjectionView({ onSourceChange }: ProjectionViewProps) {
+export function ProjectionView({ onSourceChange, modelName, onModelNameChange }: ProjectionViewProps) {
   const {
-    modelName,
     setModelName,
     selectedCellType,
     setSelectedCellType,
     diseaseActivity,
     setDiseaseActivity,
-    loading,
-    error,
+    viewState,
     healthyData,
     diseaseData,
     cellTypes,
-  } = useProjectionView(onSourceChange);
+  } = useProjectionView(onSourceChange, modelName, onModelNameChange);
 
   const traces: Data[] = useMemo(() => {
     const out: Data[] = [];
@@ -74,17 +74,16 @@ export function ProjectionView({ onSourceChange }: ProjectionViewProps) {
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
       <div className="min-w-0">
-        {loading ? (
-          <div className="flex h-[520px] items-center justify-center rounded-lg border border-slate-700 bg-slate-900/40 text-slate-400">
-            Loading…
-          </div>
-        ) : null}
-        {error !== null && !loading ? (
+        {viewState.status === "loading" ? <ChartSkeleton variant="umap" /> : null}
+        {viewState.status === "error" ? (
           <div className="rounded-lg border border-red-900/60 bg-red-950/40 p-4 text-sm text-red-200">
-            {error}
+            {viewState.message}
           </div>
         ) : null}
-        {!loading && error === null && healthyData !== null && diseaseData !== null ? (
+        {viewState.status === "not_found" ? (
+          <DashboardEmptyState viewName="Projection" dataset="covid_wilk" model={modelName} />
+        ) : null}
+        {viewState.status === "ready" && healthyData !== null && diseaseData !== null ? (
           <UmapScatter
             traces={traces}
             title={`COVID projection — ${diseaseData.model}`}

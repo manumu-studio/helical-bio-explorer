@@ -1,5 +1,21 @@
 # helical-bio-explorer
 
+Single-cell foundation models (Geneformer, GenePT) applied to a healthy → disease reference-mapping workflow, served via FastAPI + Next.js.
+
+![dashboard hero](docs/assets/dashboard-hero.png)
+
+| Live demo | API |
+| --- | --- |
+| https://helical-bio-explorer.vercel.app/dashboard | https://api.helical.manumustudio.com/docs |
+
+## Quick links
+
+- [Architecture decisions](docs/research/DECISIONS.md)
+- [Build packets](docs/build-packets/)
+- [Journal entries](docs/journal/)
+
+---
+
 A small web app that explores how different bio foundation models "see" single-cell RNA-seq data — pick a dataset, pick a model, see how it organizes the cells.
 
 ## Stack

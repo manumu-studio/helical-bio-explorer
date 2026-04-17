@@ -2,59 +2,58 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import type { DistanceViewState } from "@/components/DistanceView/DistanceView.types";
 import { getClientBackendBaseUrl } from "@/lib/backend-url";
-import { FetchError, fetcher, type FetchSource } from "@/lib/fetcher";
-import { ScoresResponseSchema, type ScoresResponse } from "@/lib/schemas/scores";
-import { SummaryResponseSchema, type SummaryResponse } from "@/lib/schemas/summary";
+import { FetchError, type FetchSource } from "@/lib/fetcher";
+import { fetchJsonOrNotFound } from "@/lib/fetchJson";
+import { ScoresResponseSchema } from "@/lib/schemas/scores";
+import { SummaryResponseSchema } from "@/lib/schemas/summary";
 
 export function useDistanceView(onSourceChange?: (source: FetchSource) => void) {
   const [selectedCellType, setSelectedCellType] = useState("All");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [summaryData, setSummaryData] = useState<SummaryResponse | null>(null);
-  const [scoresData, setScoresData] = useState<ScoresResponse | null>(null);
-  const [source, setSource] = useState<FetchSource>("unknown");
+  const [viewState, setViewState] = useState<DistanceViewState>({ status: "loading" });
 
   const onSourceChangeRef = useRef(onSourceChange);
   onSourceChangeRef.current = onSourceChange;
 
   const reportSource = useCallback((next: FetchSource) => {
-    setSource(next);
     onSourceChangeRef.current?.(next);
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      setLoading(true);
-      setError(null);
+      setViewState({ status: "loading" });
       try {
         const base = getClientBackendBaseUrl();
         const summaryUrl = `${base}/api/v1/summary/covid_wilk`;
         const scoresUrl = `${base}/api/v1/scores/covid_wilk?sample_size=5000`;
         const [summaryResult, scoresResult] = await Promise.all([
-          fetcher(summaryUrl, SummaryResponseSchema),
-          fetcher(scoresUrl, ScoresResponseSchema),
+          fetchJsonOrNotFound(summaryUrl, SummaryResponseSchema),
+          fetchJsonOrNotFound(scoresUrl, ScoresResponseSchema),
         ]);
         if (cancelled) {
           return;
         }
-        setSummaryData(summaryResult.data);
-        setScoresData(scoresResult.data);
+        if (summaryResult.status === "not_found" || scoresResult.status === "not_found") {
+          setViewState({ status: "not_found" });
+          reportSource("unknown");
+          return;
+        }
+        setViewState({
+          status: "ready",
+          summaryData: summaryResult.data,
+          scoresData: scoresResult.data,
+          source: scoresResult.source,
+        });
         reportSource(scoresResult.source);
       } catch (e: unknown) {
         if (cancelled) {
           return;
         }
         const message = e instanceof FetchError ? e.message : "Failed to load distance data";
-        setError(message);
-        setSummaryData(null);
-        setScoresData(null);
+        setViewState({ status: "error", message });
         reportSource("unknown");
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
       }
     }
     void load();
@@ -62,6 +61,9 @@ export function useDistanceView(onSourceChange?: (source: FetchSource) => void) 
       cancelled = true;
     };
   }, [reportSource]);
+
+  const summaryData = viewState.status === "ready" ? viewState.summaryData : null;
+  const scoresData = viewState.status === "ready" ? viewState.scoresData : null;
 
   const cellTypes = useMemo(() => {
     const unique = new Set<string>();
@@ -97,11 +99,9 @@ export function useDistanceView(onSourceChange?: (source: FetchSource) => void) 
   return {
     selectedCellType,
     setSelectedCellType,
-    loading,
-    error,
+    viewState,
     summaryData,
     scoresData,
-    source,
     cellTypes,
     filteredGroups,
     filteredScoreCells,
