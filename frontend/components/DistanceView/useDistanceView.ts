@@ -30,8 +30,8 @@ export function useDistanceView(onSourceChange?: (source: FetchSource) => void) 
       setError(null);
       try {
         const base = getClientBackendBaseUrl();
-        const summaryUrl = `${base}/api/v1/summary/sle_csle`;
-        const scoresUrl = `${base}/api/v1/scores/sle_csle?sample_size=5000`;
+        const summaryUrl = `${base}/api/v1/summary/covid_wilk`;
+        const scoresUrl = `${base}/api/v1/scores/covid_wilk?sample_size=5000`;
         const [summaryResult, scoresResult] = await Promise.all([
           fetcher(summaryUrl, SummaryResponseSchema),
           fetcher(scoresUrl, ScoresResponseSchema),

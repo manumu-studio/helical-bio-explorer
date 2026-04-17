@@ -41,7 +41,7 @@ export function useDisagreementView(onSourceChange?: (source: FetchSource) => vo
         if (diseaseActivity !== "All") {
           params.set("disease_activity", diseaseActivity);
         }
-        const url = `${base}/api/v1/disagreement/sle_csle?${params.toString()}`;
+        const url = `${base}/api/v1/disagreement/covid_wilk?${params.toString()}`;
         const result = await fetcher(url, DisagreementResponseSchema);
         if (cancelled) {
           return;
