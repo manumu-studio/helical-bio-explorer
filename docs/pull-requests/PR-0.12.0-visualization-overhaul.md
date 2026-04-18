@@ -68,9 +68,15 @@ badge, button, card, popover, sheet, slider, tabs, toggle-group, tooltip — all
 - No new environment variables
 - Backend changes are backward-compatible
 
+### Documentation overhaul
+- **README.md** — full rewrite: animated GIF hero (landing page helix), four dashboard screenshots, architecture diagram, API table, stack table. ML vocabulary aligned to JD. Removed internal tooling references.
+- **DIAGRAM-CI-CD.md** — ASCII flow: PR → CI (ruff/mypy/pytest + lint/typecheck/build) → OIDC deploy to EC2 via SSM + Vercel auto-deploy
+- **DIAGRAM-DATA-PIPELINE.md** — five-stage pipeline: AnnData ingestion → Geneformer/GenePT embedding → UMAP reduction → Parquet serialization → S3 storage
+- **DIAGRAM-REQUEST-FLOW.md** — end-to-end request trace: Zustand → Zod fetch → nginx → FastAPI → ParquetStore → Plotly render, with type-safety chain diagram
+
 ## Files changed
 
-70 files, +8,486 / −2,525 lines
+~75 files, +8,900 / −2,600 lines (approx)
 
 Key new files:
 - `frontend/components/dashboard/FilterSidebar/` (4 files)
