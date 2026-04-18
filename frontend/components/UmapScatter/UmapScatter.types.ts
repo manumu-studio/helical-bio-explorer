@@ -1,12 +1,15 @@
-// Props for the shared Plotly UMAP scatter wrapper (dark theme, responsive).
+// Props for Plotly UMAP scatter: themed layout (grid + ticks), lasso selection, optional layout overrides.
 
-import type { Data } from "plotly.js";
+import type { Data, Layout } from "plotly.js";
 
 export interface UmapScatterProps {
   traces: Data[];
   title: string;
   xLabel: string;
   yLabel: string;
-  height?: number;
+  height?: number | string;
   width?: number;
+  layoutOverrides?: Partial<Layout>;
+  onSelectedCellIds?: (cellIds: string[]) => void;
+  onClearSelection?: () => void;
 }

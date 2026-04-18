@@ -30,7 +30,7 @@ export function FilterPanel({
   return (
     <aside
       className="flex flex-col gap-4 rounded-lg border border-slate-700 p-4"
-      style={{ backgroundColor: "var(--color-surface)" }}
+      style={{ backgroundColor: "var(--bg-elevated)" }}
     >
       {showModel ? (
         <div>
@@ -52,7 +52,7 @@ export function FilterPanel({
                   }`}
                   style={
                     active
-                      ? { backgroundColor: "var(--color-accent)", color: "#0f172a" }
+                      ? { backgroundColor: "var(--accent-indigo)", color: "#0f172a" }
                       : undefined
                   }
                 >
@@ -104,7 +104,7 @@ export function FilterPanel({
                   }`}
                   style={
                     active
-                      ? { backgroundColor: "var(--color-accent)", color: "#0f172a" }
+                      ? { backgroundColor: "var(--accent-indigo)", color: "#0f172a" }
                       : undefined
                   }
                 >

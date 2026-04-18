@@ -8,15 +8,15 @@ const LINKS = [
 
 export function DashboardFooter() {
   return (
-    <footer className="border-t border-slate-800 px-6 py-3">
-      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-slate-500">
+    <footer className="border-t border-[var(--border)] bg-[var(--bg-base)] px-4 py-3 md:px-6">
+      <div className="flex flex-col items-stretch gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-x-4 sm:gap-y-2">
         {LINKS.map((link) => (
           <a
             key={link.href}
             href={link.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-slate-300"
+            className="flex min-h-11 items-center justify-center rounded-md px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
           >
             {link.label}
           </a>

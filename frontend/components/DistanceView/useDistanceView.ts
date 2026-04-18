@@ -1,16 +1,34 @@
-// Fetches full summary aggregates and sampled per-cell scores; cell-type filter is client-side.
+// Fetches summary + scores; filters by selection store; builds heatmap aggregates.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { DistanceViewState } from "@/components/DistanceView/DistanceView.types";
 import { getClientBackendBaseUrl } from "@/lib/backend-url";
+import { normalizeSeverity, type SeverityBucket } from "@/lib/dashboard/conditions";
 import { FetchError, type FetchSource } from "@/lib/fetcher";
 import { fetchJsonOrNotFound } from "@/lib/fetchJson";
+import { resolveCanonicalCellType } from "@/lib/constants/cellTypeColors";
 import { ScoresResponseSchema } from "@/lib/schemas/scores";
 import { SummaryResponseSchema } from "@/lib/schemas/summary";
+import { isCellTypeVisible, useSelectionStore } from "@/lib/stores/useSelectionStore";
+
+const HEATMAP_ROWS: SeverityBucket[] = ["healthy", "mild", "severe"];
+
+export interface HeatmapDatum {
+  x: string;
+  /** Mean distance (Geneformer). */
+  y: number;
+  count: number;
+}
+
+export interface HeatmapRow {
+  id: string;
+  data: HeatmapDatum[];
+}
 
 export function useDistanceView(onSourceChange?: (source: FetchSource) => void) {
-  const [selectedCellType, setSelectedCellType] = useState("All");
+  const activeCellTypes = useSelectionStore((s) => s.activeCellTypes);
+
   const [viewState, setViewState] = useState<DistanceViewState>({ status: "loading" });
 
   const onSourceChangeRef = useRef(onSourceChange);
@@ -76,34 +94,63 @@ export function useDistanceView(onSourceChange?: (source: FetchSource) => void) 
     return Array.from(unique).sort((a, b) => a.localeCompare(b));
   }, [scoresData, summaryData]);
 
-  const filteredGroups = useMemo(() => {
-    if (summaryData === null) {
-      return [];
-    }
-    if (selectedCellType === "All") {
-      return summaryData.groups;
-    }
-    return summaryData.groups.filter((g) => g.cell_type === selectedCellType);
-  }, [selectedCellType, summaryData]);
-
   const filteredScoreCells = useMemo(() => {
     if (scoresData === null) {
       return [];
     }
-    if (selectedCellType === "All") {
-      return scoresData.cells;
+    return scoresData.cells.filter((c) => {
+      const canon = resolveCanonicalCellType(c.cell_type);
+      if (canon === null) {
+        return true;
+      }
+      return isCellTypeVisible(canon, activeCellTypes);
+    });
+  }, [activeCellTypes, scoresData]);
+
+  const heatmapRows = useMemo((): HeatmapRow[] => {
+    const cells = filteredScoreCells;
+    if (cells.length === 0) {
+      return [];
     }
-    return scoresData.cells.filter((c) => c.cell_type === selectedCellType);
-  }, [scoresData, selectedCellType]);
+    const columns = Array.from(new Set(cells.map((c) => c.cell_type))).sort((a, b) => a.localeCompare(b));
+    const buckets = new Map<string, { sum: number; n: number }>();
+    for (const c of cells) {
+      const sev = normalizeSeverity(c.disease_activity);
+      if (sev === null) {
+        continue;
+      }
+      const key = `${sev}\u0000${c.cell_type}`;
+      const prev = buckets.get(key) ?? { sum: 0, n: 0 };
+      prev.sum += c.distance_geneformer;
+      prev.n += 1;
+      buckets.set(key, prev);
+    }
+    return HEATMAP_ROWS.map((row) => ({
+      id: row,
+      data: columns.map((col) => {
+        const b = buckets.get(`${row}\u0000${col}`);
+        const count = b?.n ?? 0;
+        const sum = b?.sum ?? 0;
+        const y = count > 0 ? sum / count : 0;
+        return { x: col, y, count };
+      }),
+    }));
+  }, [filteredScoreCells]);
+
+  const filteredGroups = useMemo(() => {
+    if (summaryData === null) {
+      return [];
+    }
+    return summaryData.groups;
+  }, [summaryData]);
 
   return {
-    selectedCellType,
-    setSelectedCellType,
     viewState,
-    summaryData,
     scoresData,
+    summaryData,
     cellTypes,
     filteredGroups,
     filteredScoreCells,
+    heatmapRows,
   };
 }

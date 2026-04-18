@@ -1,17 +1,67 @@
-/* Global styles: Tailwind v4 import and dashboard dark-theme design tokens. */
+/* Global styles: Tailwind v4 import, theme tokens (light :root / dark .dark), and font config. */
 
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: var(--font-fraunces), serif;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
 :root {
-  --color-bg: #0f172a;
-  --color-surface: #1e293b;
-  --color-text: #f8fafc;
-  --color-accent: #38bdf8;
+  --bg-base: #ffffff;
+  --bg-elevated: #f8fafc;
+  --bg-card: #f1f5f9;
+  --border: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --accent-indigo: #6366f1;
+  --accent-emerald: #10b981;
+  --accent-cyan: #06b6d4;
+  --accent-violet: #8b5cf6;
+}
+
+.dark {
+  --bg-base: #0a0a0f;
+  --bg-elevated: #12131a;
+  --bg-card: #1a1b24;
+  --border: #2a2b38;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  /* accent-* unchanged across themes */
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: var(--color-bg);
-  color: var(--color-text);
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+}
+
+/* Plotly mode bar — light canvas (matches white / slate-50 plot paper). */
+.js-plotly-plot .modebar-group {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.js-plotly-plot .modebar-btn .icon path {
+  fill: rgba(15, 23, 42, 0.45);
+}
+
+.js-plotly-plot .modebar-btn.active .icon path {
+  fill: rgba(15, 23, 42, 0.88);
+}
+
+/* Plotly mode bar — dark slate plot chrome `rgb(30, 41, 59)`. */
+.dark .js-plotly-plot .modebar-group {
+  background-color: rgba(30, 41, 59, 0.5) !important;
+}
+
+.dark .js-plotly-plot .modebar-btn .icon path {
+  fill: rgba(255, 255, 255, 0.35);
+}
+
+.dark .js-plotly-plot .modebar-btn.active .icon path {
+  fill: rgba(255, 255, 255, 0.85);
 }

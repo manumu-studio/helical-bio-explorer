@@ -69,8 +69,8 @@ class ParquetStore:
         version: str,
         dataset_slug: str,
         artifact_type: str,
-    ) -> tuple[bytes, Literal["s3", "local"]]:
-        """Return raw parquet bytes and whether they were served from S3 or local disk."""
+    ) -> tuple[bytes | Path, Literal["s3", "local"]]:
+        """Return parquet bytes (S3) or local Path, plus the source label."""
 
         key = self._s3_key(version, dataset_slug, artifact_type)
 
@@ -88,17 +88,12 @@ class ParquetStore:
         else:
             logger.debug("S3_BUCKET unset; reading local parquet only for key %s", key)
 
-        try:
-            local_bytes = await asyncio.to_thread(
-                self._read_local_sync,
-                dataset_slug,
-                artifact_type,
-            )
-        except FileNotFoundError as exc:
+        local_path = self._local_path(dataset_slug, artifact_type)
+        if not local_path.exists():
             msg = (
                 f"Parquet not found in S3 (bucket={self._bucket!r}, key={key!r}) "
-                f"or locally at {self._local_path(dataset_slug, artifact_type)!s}"
+                f"or locally at {local_path!s}"
             )
-            raise FileNotFoundError(msg) from exc
+            raise FileNotFoundError(msg)
 
-        return local_bytes, "local"
+        return local_path, "local"

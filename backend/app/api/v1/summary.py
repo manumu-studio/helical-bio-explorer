@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections import defaultdict
+from pathlib import Path
 from statistics import mean, pstdev
 from typing import Annotated
 
@@ -47,7 +48,7 @@ async def get_summary(
 
     version = await resolve_latest_version(dataset_slug, session)
 
-    async def _read_or_404(artifact: str) -> tuple[bytes, str]:
+    async def _read_or_404(artifact: str) -> tuple[bytes | Path, str]:
         key = f"v{version}/{dataset_slug}/{artifact}.parquet"
         try:
             data, src = await store.read(version, dataset_slug, artifact)
