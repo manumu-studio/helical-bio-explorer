@@ -27,7 +27,7 @@ export function AboutPanel({ open, onClose }: AboutPanelProps) {
         onClick={onClose}
       />
       <div
-        className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-slate-600 bg-slate-900 p-6 text-sm text-slate-200 shadow-xl"
+        className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-6 text-sm text-[var(--text-secondary)] shadow-xl"
         onClick={(e) => {
           e.stopPropagation();
         }}
@@ -38,20 +38,20 @@ export function AboutPanel({ open, onClose }: AboutPanelProps) {
         }}
       >
         <div className="mb-4 flex items-start justify-between gap-4">
-          <h2 id="about-demo-title" className="text-base font-semibold text-slate-50">
+          <h2 id="about-demo-title" className="text-base font-semibold text-[var(--text-primary)]">
             About this demo
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded border border-slate-600 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800"
+            className="rounded border border-[var(--border)] px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
           >
             Close
           </button>
         </div>
-        <p className="mb-4 leading-relaxed text-slate-300">{ABOUT_COPY.reference_mapping}</p>
-        <p className="mb-4 leading-relaxed text-slate-300">{ABOUT_COPY.what_this_demo_shows}</p>
-        <p className="mb-4 leading-relaxed text-slate-300">{ABOUT_COPY.how_it_was_built}</p>
+        <p className="mb-4 leading-relaxed text-[var(--text-secondary)]">{ABOUT_COPY.reference_mapping}</p>
+        <p className="mb-4 leading-relaxed text-[var(--text-secondary)]">{ABOUT_COPY.what_this_demo_shows}</p>
+        <p className="mb-4 leading-relaxed text-[var(--text-secondary)]">{ABOUT_COPY.how_it_was_built}</p>
         <ul className="flex flex-col gap-2">
           {ABOUT_LINKS.map((link) => (
             <li key={link.href}>
@@ -59,7 +59,7 @@ export function AboutPanel({ open, onClose }: AboutPanelProps) {
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sky-400 underline-offset-2 hover:text-sky-300 hover:underline"
+                className="text-[var(--accent-indigo)] underline-offset-2 hover:underline"
               >
                 {link.label}
               </a>

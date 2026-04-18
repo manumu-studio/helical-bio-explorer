@@ -2,4 +2,6 @@
 
 export interface ThemeToggleProps {
   readonly className?: string;
+  readonly onMouseEnter?: () => void;
+  readonly onMouseLeave?: () => void;
 }
