@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import io
 import random
+from pathlib import Path
 from typing import cast
 
 import pyarrow as pa
@@ -13,9 +14,11 @@ import pyarrow.compute as pc
 import pyarrow.parquet as pq
 
 
-def read_parquet_table(data: bytes) -> pa.Table:
-    """Parse raw parquet bytes into a PyArrow Table."""
+def read_parquet_table(data: bytes | Path) -> pa.Table:
+    """Parse parquet from bytes or memory-mapped local path into a PyArrow Table."""
 
+    if isinstance(data, Path):
+        return pq.read_table(data, memory_map=True)
     return pq.read_table(io.BytesIO(data))
 
 

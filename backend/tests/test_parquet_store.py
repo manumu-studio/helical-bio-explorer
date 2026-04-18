@@ -103,7 +103,7 @@ async def test_fallback_when_s3_key_missing_and_local_exists(
         data, source = await store.read(version, dataset_slug, artifact_type)
 
     assert source == "local"
-    assert data == parquet_bytes
+    assert isinstance(data, Path) and data.read_bytes() == parquet_bytes
     assert any("S3 read failed" in r.getMessage() for r in caplog.records)
 
 
@@ -144,7 +144,7 @@ async def test_fallback_when_botocore_error(
         data, source = await store.read(version, dataset_slug, artifact_type)
 
     assert source == "local"
-    assert data == parquet_bytes
+    assert isinstance(data, Path) and data.read_bytes() == parquet_bytes
     assert any("S3 read failed" in r.getMessage() for r in caplog.records)
 
 
@@ -175,7 +175,7 @@ async def test_local_only_when_bucket_is_none(
     data, source = await store.read(version, dataset_slug, artifact_type)
 
     assert source == "local"
-    assert data == parquet_bytes
+    assert isinstance(data, Path) and data.read_bytes() == parquet_bytes
     assert not any("S3 read failed" in r.getMessage() for r in caplog.records)
 
 

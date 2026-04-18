@@ -1,4 +1,4 @@
-// Fetches sampled disagreement rows; optional cell-type and disease-activity query filters.
+// Fetches sampled disagreement rows; filters client-side via selection store.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -7,10 +7,20 @@ import { getClientBackendBaseUrl } from "@/lib/backend-url";
 import { FetchError, type FetchSource } from "@/lib/fetcher";
 import { fetchJsonOrNotFound } from "@/lib/fetchJson";
 import { DisagreementResponseSchema } from "@/lib/schemas/disagreement";
+import type { DisagreementCell } from "@/lib/schemas/disagreement";
+import { resolveCanonicalCellType } from "@/lib/constants/cellTypeColors";
+import {
+  isCellTypeVisible,
+  isConditionVisible,
+  useSelectionStore,
+} from "@/lib/stores/useSelectionStore";
 
 export function useDisagreementView(onSourceChange?: (source: FetchSource) => void) {
-  const [selectedCellType, setSelectedCellType] = useState("All");
-  const [diseaseActivity, setDiseaseActivity] = useState("All");
+  const activeCellTypes = useSelectionStore((s) => s.activeCellTypes);
+  const activeConditions = useSelectionStore((s) => s.activeConditions);
+  const divergenceRange = useSelectionStore((s) => s.divergenceRange);
+  const setDivergenceRange = useSelectionStore((s) => s.setDivergenceRange);
+
   const [viewState, setViewState] = useState<DisagreementViewState>({ status: "loading" });
   const [cellTypeCatalog, setCellTypeCatalog] = useState<string[]>([]);
 
@@ -29,12 +39,6 @@ export function useDisagreementView(onSourceChange?: (source: FetchSource) => vo
         const base = getClientBackendBaseUrl();
         const params = new URLSearchParams();
         params.set("sample_size", "5000");
-        if (selectedCellType !== "All") {
-          params.set("cell_type", selectedCellType);
-        }
-        if (diseaseActivity !== "All") {
-          params.set("disease_activity", diseaseActivity);
-        }
         const url = `${base}/api/v1/disagreement/covid_wilk?${params.toString()}`;
         const result = await fetchJsonOrNotFound(url, DisagreementResponseSchema);
         if (cancelled) {
@@ -51,12 +55,10 @@ export function useDisagreementView(onSourceChange?: (source: FetchSource) => vo
           source: result.source,
         });
         reportSource(result.source);
-        if (selectedCellType === "All" && diseaseActivity === "All") {
-          const unique = Array.from(new Set(result.data.cells.map((c) => c.cell_type))).sort((a, b) =>
-            a.localeCompare(b),
-          );
-          setCellTypeCatalog(unique);
-        }
+        const unique = Array.from(new Set(result.data.cells.map((c) => c.cell_type))).sort((a, b) =>
+          a.localeCompare(b),
+        );
+        setCellTypeCatalog(unique);
       } catch (e: unknown) {
         if (cancelled) {
           return;
@@ -70,9 +72,41 @@ export function useDisagreementView(onSourceChange?: (source: FetchSource) => vo
     return () => {
       cancelled = true;
     };
-  }, [diseaseActivity, reportSource, selectedCellType]);
+  }, [reportSource]);
 
   const data = viewState.status === "ready" ? viewState.data : null;
+
+  const disagreementInitRef = useRef(false);
+  useEffect(() => {
+    if (data === null || data.cells.length === 0 || disagreementInitRef.current) {
+      return;
+    }
+    const vals = data.cells.map((c) => c.disagreement);
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    if (min <= max) {
+      setDivergenceRange([min, max]);
+      disagreementInitRef.current = true;
+    }
+  }, [data, setDivergenceRange]);
+
+  const filteredCells = useMemo(() => {
+    if (data === null) {
+      return [] as DisagreementCell[];
+    }
+    const [r0, r1] = divergenceRange;
+    return data.cells.filter((c) => {
+      const canon = resolveCanonicalCellType(c.cell_type);
+      if (canon !== null && !isCellTypeVisible(canon, activeCellTypes)) {
+        return false;
+      }
+      if (!isConditionVisible(c.disease_activity, activeConditions)) {
+        return false;
+      }
+      const d = c.disagreement;
+      return d >= r0 && d <= r1;
+    });
+  }, [activeCellTypes, activeConditions, data, divergenceRange]);
 
   const cellTypes = useMemo(() => {
     if (cellTypeCatalog.length > 0) {
@@ -85,13 +119,19 @@ export function useDisagreementView(onSourceChange?: (source: FetchSource) => vo
     return Array.from(unique).sort((a, b) => a.localeCompare(b));
   }, [cellTypeCatalog, data]);
 
+  const divergenceBounds = useMemo(() => {
+    if (data === null || data.cells.length === 0) {
+      return { min: 0, max: 1 };
+    }
+    const vals = data.cells.map((c) => c.disagreement);
+    return { min: Math.min(...vals), max: Math.max(...vals) };
+  }, [data]);
+
   return {
-    selectedCellType,
-    setSelectedCellType,
-    diseaseActivity,
-    setDiseaseActivity,
     viewState,
     data,
+    filteredCells,
     cellTypes,
+    divergenceBounds,
   };
 }

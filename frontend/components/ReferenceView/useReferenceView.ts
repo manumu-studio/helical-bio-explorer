@@ -1,4 +1,4 @@
-// Fetches healthy reference embeddings and tracks model / cell-type filter state.
+// Fetches healthy reference embeddings; filters by global selection store (cell types).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -7,13 +7,15 @@ import { getClientBackendBaseUrl } from "@/lib/backend-url";
 import { FetchError, type FetchSource } from "@/lib/fetcher";
 import { fetchJsonOrNotFound } from "@/lib/fetchJson";
 import { EmbeddingResponseSchema } from "@/lib/schemas/embeddings";
+import { isCellTypeVisible, useSelectionStore } from "@/lib/stores/useSelectionStore";
+import { resolveCanonicalCellType } from "@/lib/constants/cellTypeColors";
 
 export function useReferenceView(
   onSourceChange: ((source: FetchSource) => void) | undefined,
   modelName: string,
   onModelNameChange: (name: string) => void,
 ) {
-  const [selectedCellType, setSelectedCellType] = useState("All");
+  const activeCellTypes = useSelectionStore((s) => s.activeCellTypes);
   const [viewState, setViewState] = useState<ReferenceViewState>({ status: "loading" });
 
   const onSourceChangeRef = useRef(onSourceChange);
@@ -74,11 +76,14 @@ export function useReferenceView(
     if (data === null) {
       return [];
     }
-    if (selectedCellType === "All") {
-      return data.cells;
-    }
-    return data.cells.filter((c) => c.cell_type === selectedCellType);
-  }, [data, selectedCellType]);
+    return data.cells.filter((c) => {
+      const canon = resolveCanonicalCellType(c.cell_type);
+      if (canon === null) {
+        return true;
+      }
+      return isCellTypeVisible(canon, activeCellTypes);
+    });
+  }, [data, activeCellTypes]);
 
   const cellTypeCount = useMemo(() => {
     if (data === null) {
@@ -90,8 +95,6 @@ export function useReferenceView(
   return {
     modelName,
     setModelName: onModelNameChange,
-    selectedCellType,
-    setSelectedCellType,
     viewState,
     data,
     cellTypes,
