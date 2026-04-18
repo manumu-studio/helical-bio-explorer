@@ -1,153 +1,119 @@
-# helical-bio-explorer
+# Helical Bio Explorer
 
-Single-cell foundation models (Geneformer, GenePT) applied to a healthy → disease reference-mapping workflow, served via FastAPI + Next.js.
+> When cells go wrong, how do we see it faster?
 
-![dashboard hero](docs/assets/dashboard-hero.png)
+Embed patient cells with foundation models, map them against a healthy reference, and surface the differences that matter — at single-cell resolution.
 
-| Live demo | API |
-| --- | --- |
-| https://helical-bio-explorer.vercel.app/dashboard | https://api.helical.manumustudio.com/docs |
-
-## Quick links
-
-- [Architecture decisions](docs/research/DECISIONS.md)
-- [Build packets](docs/build-packets/)
-- [Journal entries](docs/journal/)
+<p align="center">
+  <a href="https://helical.manumustudio.com"><strong>Live Demo</strong></a> · <a href="https://api.helical.manumustudio.com/docs"><strong>API Docs</strong></a> · <a href="https://github.com/manumu-studio/helical-bio-explorer"><strong>Source Code</strong></a>
+</p>
 
 ---
 
-A small web app that explores how different bio foundation models "see" single-cell RNA-seq data — pick a dataset, pick a model, see how it organizes the cells.
+<p align="center">
+  <img src="public/assets/landing-animation.gif" alt="Helical Bio Explorer — landing page animation" width="800" />
+</p>
+
+---
+
+## What it does
+
+A data processing pipeline ingests public single-cell RNA-seq data, runs it through two bio foundation models (**Geneformer** and **GenePT** via the [Helical SDK](https://github.com/helicalAI/helical)), and writes precomputed embeddings to Parquet. The embedding pipeline takes **healthy PBMC cells** as a reference baseline, then projects **COVID patient cells** ([Wilk et al.](https://www.nature.com/articles/s41591-020-0944-y) dataset from CELLxGENE Census) into that same latent space using UMAP dimensionality reduction.
+
+The dashboard compares model outputs, quantifies per-cell divergence from healthy baseline, and surfaces where the two models agree or disagree — turning raw embeddings into interpretable biology.
+
+## Dashboard
+
+Four interactive views, each revealing a different dimension of how disease reshapes cell identity:
+
+### Reference Atlas
+Healthy PBMC baseline embedded with Geneformer — UMAP (Uniform Manifold Approximation and Projection) visualization of ~3,000 cells, colored by cell type.
+
+<p align="center">
+  <img src="public/assets/reference-atlas-tab-black.webp" alt="Reference Atlas — healthy PBMC baseline" width="800" />
+</p>
+
+### Projection
+COVID patient cells projected into the healthy reference space. Colored dots = disease cells overlaid on the gray healthy baseline. Shows where patient cells cluster near or far from their healthy counterparts.
+
+<p align="center">
+  <img src="public/assets/projection-black.webp" alt="Projection — COVID cells mapped onto healthy reference" width="800" />
+</p>
+
+### Distance
+Divergence heatmap (condition × cell type) and per-cell model agreement scatter. Quantifies how far each cell type has shifted from baseline across disease severity levels.
+
+<p align="center">
+  <img src="public/assets/distance-black.webp" alt="Distance — divergence heatmap and model agreement" width="800" />
+</p>
+
+### Disagreement
+Where Geneformer and GenePT disagree on how much a cell has changed. Points far from the diagonal indicate cell populations where model architecture matters most.
+
+<p align="center">
+  <img src="public/assets/disagreement-black.webp" alt="Disagreement — cross-model comparison" width="800" />
+</p>
+
+## Architecture
+
+```
+┌─────────────────────────────────┐
+│         Next.js 15 + TS         │  Vercel
+│   Plotly · Tailwind v4 · Zod   │
+└──────────────┬──────────────────┘
+               │ REST
+┌──────────────▼──────────────────┐
+│        FastAPI (Python)         │  AWS EC2
+│   Pydantic · Parquet · S3      │
+└──────────────┬──────────────────┘
+               │
+┌──────────────▼──────────────────┐
+│   Embedding & Reduction Pipeline│  S3 (Parquet)
+│   Geneformer · GenePT · UMAP   │
+│   Model comparison · Distances  │
+└─────────────────────────────────┘
+```
+
+## API
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/v1/embeddings/{dataset}/{model}` | Raw model embeddings |
+| `GET /api/v1/projections/{dataset}/{model}` | UMAP-projected coordinates |
+| `GET /api/v1/distances/{dataset}/{model}` | Per-cell distances from reference |
+| `GET /api/v1/disagreement/{dataset}` | Cross-model disagreement scores |
+| `GET /api/v1/summary/{dataset}` | Aggregated stats by cell type and condition |
+| `GET /health` | Service health check |
+
+Full OpenAPI spec: [api.helical.manumustudio.com/docs](https://api.helical.manumustudio.com/docs)
 
 ## Stack
 
-- **Backend:** Python 3.11 + FastAPI + pytest
-- **Frontend:** Next.js 15 + React + TypeScript + Tailwind CSS v4
-- **Models:** wrapped via the open-source [Helical SDK](https://github.com/helicalAI/helical)
-- **Data:** public single-cell datasets (PBMC 3k, `yolksac_human`, CELLxGENE)
-- **Tooling:** Docker Compose, GitHub Actions, Husky (git hooks), pnpm
-
-## Why this exists
-
-Bio foundation models like Geneformer, scGPT and GenePT promise to do for cells what GPT did for text — but each lives behind different installation rituals, APIs and assumptions. The Helical SDK unifies them. This project is a small front-end on top of that SDK: side-by-side embeddings, interactive UMAPs, model-to-model comparisons.
-
-## Status
-
-**Persistence layer (v0.2.0).** FastAPI exposes `GET /api/datasets` backed by Neon Postgres via SQLModel (asyncpg at runtime). Next.js includes a server-rendered `/datasets` page and a Prisma schema for `saved_views` only — dual-ORM bounded contexts on one database, as described in [ADR-003](docs/research/DECISIONS.md#adr-003--dual-orm-bounded-contexts-on-a-shared-postgres).
-
-**S3 / Parquet plumbing.** The backend includes a `ParquetStore` service that reads versioned parquet bytes from S3 first and falls back to a read-only local directory on any S3 error ([ADR-005](docs/research/DECISIONS.md#adr-005--local-parquet-fallback-for-runtime-resilience)).
-
-**Parquet JSON API (v0.4.0).** FastAPI serves precomputed artifacts under `/api/v1` — embeddings, projections, scores, disagreement, and summary stats — with `X-Served-From: s3|local` on each response. Version selection uses the latest `precompute_runs` row per dataset. OpenAPI: `http://localhost:8000/docs` when `uvicorn` is running.
-
-**Dashboard (v0.5.0).** The Next.js app redirects `/` to `/dashboard`, a dark-themed tabbed UI (Plotly + Tailwind v4) that calls `/api/v1` from the browser. Set **`NEXT_PUBLIC_BACKEND_URL`** in `frontend/.env.local` to the same origin you use for the API (for example `http://localhost:8000`).
-
-The Helical SDK runs offline in precompute; the live app reads parquet-backed JSON only.
-
-See [docs/research/DECISIONS.md](docs/research/DECISIONS.md) for architecture decisions and [docs/journal/](docs/journal/) for the build log.
+| Layer | Technology |
+|---|---|
+| **Frontend** | Next.js 15, React, TypeScript (strict), Tailwind CSS v4, Plotly.js, Zod |
+| **Backend** | Python 3.11, FastAPI, Pydantic, Pandas, PyArrow |
+| **Models** | [Helical SDK](https://github.com/helicalAI/helical) (Geneformer, GenePT) |
+| **Data** | Parquet on S3, PBMC 3k + Wilk et al. COVID dataset (CELLxGENE Census) |
+| **Infra** | Vercel (frontend), AWS EC2 (backend), GitHub Actions (CI/CD) |
+| **Quality** | pytest, Husky pre-commit hooks, GitHub Actions CI, ruff + mypy (backend), ESLint + tsc (frontend) |
 
 ## Quick start
 
 ```bash
-cp .env.example .env
-# Backend (Python 3.11 + uv)
-cd backend && uv venv --python 3.11 .venv && source .venv/bin/activate && uv pip install -e ".[dev]" && uvicorn app.main:app --reload --port 8000
-# Frontend (in another terminal); optional .env.local with BACKEND_URL=http://localhost:8000
-cd frontend && corepack enable && pnpm install && pnpm dev
-```
+# Backend
+cd backend
+uv venv --python 3.11 .venv && source .venv/bin/activate
+uv pip install -e ".[dev]"
+uvicorn app.main:app --reload --port 8000
 
-With Docker: from the repo root, run **`./scripts/e2e-compose-smoke.sh`** — builds both images, waits for `/health`, seeds the dataset registry, asserts `/api/datasets` includes **`pbmc3k`**, checks `/` redirects to **`/dashboard`** and that **`/dashboard`** returns 200, then runs `docker compose down`. Requires Docker Desktop (or Colima) running and a populated **repo-root `.env`** with Neon URLs (see Persistence layer below).
-
-### Persistence layer
-
-Neon provides one Postgres database; the backend and frontend use **different ORMs and migration tools** on non-overlapping tables (`datasets` / `precompute_runs` vs `saved_views`). See [ADR-003](docs/research/DECISIONS.md#adr-003--dual-orm-bounded-contexts-on-a-shared-postgres).
-
-1. **Environment variables**
-   - **`DATABASE_URL`** — pooled Neon connection string for **asyncpg** at runtime. Must start with `postgresql+asyncpg://`.
-   - **`DIRECT_URL`** — direct (non-pooled) Neon URL for **Alembic** and **Prisma Migrate**. Must start with `postgresql://` (no `+asyncpg`).
-   - Put the same logical pair in **repo-root `.env`** (for Compose), **`backend/.env`** (for local `uvicorn`), and **`frontend/.env.local`** (for Next.js and Prisma). Comment templates live in [`.env.example`](.env.example).
-
-2. **Backend schema (Alembic + SQLModel)**
-
-   ```bash
-   cd backend && uv sync --extra dev
-   export DATABASE_URL="postgresql+asyncpg://..." DIRECT_URL="postgresql://..."
-   uv run alembic upgrade head
-   uv run python -m app.scripts.seed_datasets
-   ```
-
-3. **Frontend schema (Prisma)**
-
-   ```bash
-   cd frontend && pnpm install
-   export DATABASE_URL="postgresql://..." DIRECT_URL="postgresql://..."
-   pnpm prisma migrate deploy
-   ```
-
-4. **Try the API locally**
-
-   ```bash
-   curl -sS http://localhost:8000/api/datasets | jq .
-   # After seeding datasets + precompute_runs and placing parquet (S3 or data/parquet):
-   curl -sS -D - http://localhost:8000/api/v1/embeddings/pbmc3k/geneformer -o /dev/null | grep -i X-Served-From
-   ```
-
-Runtime asyncpg uses `statement_cache_size=0` in `app/db/session.py` so Neon's PgBouncer transaction pool mode does not break prepared statements.
-
-### S3 / Parquet configuration
-
-Precomputed artifacts are stored as versioned parquet objects. The backend `ParquetStore` (see `backend/app/services/parquet_store.py`) tries S3 once per read, then falls back to the local directory below if the request fails (for example missing key, permissions, or network error). There is no retry or backoff.
-
-1. **Create an S3 bucket** (for example in the AWS console) and keep it **public-read** for the demo dataset prefix, or use private buckets with credentials appropriate to your environment. Bucket creation and IAM are outside this repo; only the read path is implemented here.
-
-2. **Environment variables** (see [`.env.example`](.env.example)):
-
-   - **`S3_BUCKET`** — Optional. When set, `ParquetStore` attempts `get_object` on `s3://{S3_BUCKET}/v{version}/{dataset_slug}/{artifact_type}.parquet`. When unset, reads use **only** the local fallback directory (useful for offline development).
-
-   - **`S3_REGION`** — AWS region for the S3 client. Defaults to `us-east-1`.
-
-   - **`S3_ENDPOINT_URL`** — Optional. Override the S3 endpoint (for example LocalStack or moto-backed tests).
-
-   - **`PARQUET_LOCAL_FALLBACK_DIR`** — Directory for fallback files at `{PARQUET_LOCAL_FALLBACK_DIR}/{dataset_slug}/{artifact_type}.parquet`. Defaults to `data/parquet` relative to the process working directory.
-
-3. **Docker production images** — To bake fallback parquet into the backend image, build with `--build-arg BAKE_PARQUET=true` from `backend/`. Default builds skip copying parquet data; see `backend/Dockerfile`.
-
-## Git hooks (Husky)
-
-After cloning, from the **repo root** (once):
-
-```bash
+# Frontend (separate terminal)
+cd frontend
 corepack enable && pnpm install
-```
-
-The root `package.json` `prepare` script runs **Husky**, which points Git at `.husky/`.
-
-| Hook | What runs |
-| --- | --- |
-| **pre-commit** | `frontend`: `pnpm typecheck`, `pnpm lint`. `backend`: `ruff check`, `ruff format --check`, `mypy --strict` on `app/` and `tests/` (requires `backend/.venv` — see Quick start). |
-| **pre-push** | `frontend`: `lint`, `typecheck`, `build`. `backend`: `ruff`, `mypy`, `pytest -v`. |
-| **commit-msg** | Conventional commit first line + blocks internal tooling tokens in the message body. |
-
-## Cursor
-
-Project rule for the agent: **`.cursor/rules/helical-bio-explorer.mdc`** (`alwaysApply: true`). Optional skill assets may live under `.cursor/skills/` (listed in `.gitignore`, not committed); they are separate from that rule file.
-
-## Structure
-
-```
-package.json      # root: husky prepare only (pnpm)
-backend/          # FastAPI app (health, datasets, /api/v1 parquet JSON API)
-frontend/         # Next.js 15 + TypeScript strict + Zod
-.husky/           # git hooks
-.cursor/rules/    # Cursor project rules (.mdc)
-docs/
-  research/       # company/industry/model analysis + decisions
-  friend-interview/  # domain expert input (PhD neuroscientist)
-  journal/        # developer-facing journal entries
-  chat-sessions/  # AI session summaries (auto-managed)
-  pull-requests/  # PR docs
-  architecture/   # ADRs + system docs
-.github/workflows/  # CI (backend + frontend)
+echo "NEXT_PUBLIC_BACKEND_URL=http://localhost:8000" > .env.local
+pnpm dev
 ```
 
 ## License
 
-TBD
+MIT
