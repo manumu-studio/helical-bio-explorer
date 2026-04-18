@@ -149,7 +149,7 @@ export function DistanceView({ onSourceChange }: DistanceViewProps) {
       <FilterSidebar
         activeTab="distance"
         datasetLabel="COVID-19 (Wilk) distance scores"
-        modelLabel="geneformer × genept"
+        modelLabel="Geneformer × GenePT"
         showModelToggle={false}
         cellTypeCounts={cellTypeCounts}
         showConditionFilter={false}
@@ -181,7 +181,7 @@ export function DistanceView({ onSourceChange }: DistanceViewProps) {
           </div>
         ) : null}
         {viewState.status === "not_found" ? (
-          <DashboardEmptyState viewName="Distance" dataset="covid_wilk" model="geneformer × genept" />
+          <DashboardEmptyState viewName="Distance" dataset="covid_wilk" model="Geneformer × GenePT" />
         ) : null}
 
         {showHeatmap ? (

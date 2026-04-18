@@ -76,26 +76,31 @@ Where Geneformer and GenePT disagree on how much a cell has changed. Points far 
 
 ## API
 
+All endpoints are read-only `GET` requests with optional `cell_type` and `disease_activity` filters.
+
 | Endpoint | Description |
 |---|---|
-| `GET /api/v1/embeddings/{dataset}/{model}` | Raw model embeddings |
-| `GET /api/v1/projections/{dataset}/{model}` | UMAP-projected coordinates |
-| `GET /api/v1/distances/{dataset}/{model}` | Per-cell distances from reference |
-| `GET /api/v1/disagreement/{dataset}` | Cross-model disagreement scores |
-| `GET /api/v1/summary/{dataset}` | Aggregated stats by cell type and condition |
-| `GET /health` | Service health check |
+| `GET /health` | Health check |
+| `GET /api/datasets` | List all datasets |
+| `GET /api/v1/embeddings/{dataset}/{model}` | UMAP embedding coordinates |
+| `GET /api/v1/projections/{dataset}/{model}` | Disease cells projected into reference manifold |
+| `GET /api/v1/scores/{dataset}` | Distance-to-healthy scores (both models) |
+| `GET /api/v1/disagreement/{dataset}` | Cross-model disagreement per cell |
+| `GET /api/v1/summary/{dataset}` | Aggregated statistics |
+| `GET /api/v1/provenance/{dataset}/{model}` | Precompute run metadata |
 
-Full OpenAPI spec: [api.helical.manumustudio.com/docs](https://api.helical.manumustudio.com/docs)
+Interactive docs at [`/docs`](https://api.helical.manumustudio.com/docs) (Swagger UI).
 
 ## Stack
 
 | Layer | Technology |
 |---|---|
-| **Frontend** | Next.js 15, React, TypeScript (strict), Tailwind CSS v4, Plotly.js, Zod |
-| **Backend** | Python 3.11, FastAPI, Pydantic, Pandas, PyArrow |
+| **Frontend** | Next.js 15, React 19, TypeScript (strict), Tailwind CSS v4, Plotly.js, Zustand, Zod |
+| **Backend** | Python 3.11, FastAPI, SQLModel, Alembic, Pydantic, Pandas, PyArrow |
 | **Models** | [Helical SDK](https://github.com/helicalAI/helical) (Geneformer, GenePT) |
-| **Data** | Parquet on S3, PBMC 3k + Wilk et al. COVID dataset (CELLxGENE Census) |
-| **Infra** | Vercel (frontend), AWS EC2 (backend), GitHub Actions (CI/CD) |
+| **Data** | Precomputed embeddings in Parquet (S3 + local fallback), PBMC 3k + Wilk et al. COVID dataset |
+| **Database** | Neon Postgres (dataset registry, precompute provenance) |
+| **Infra** | Vercel (frontend), EC2 + Nginx + Let's Encrypt (API), GitHub Actions CI/CD |
 | **Quality** | pytest, Husky pre-commit hooks, GitHub Actions CI, ruff + mypy (backend), ESLint + tsc (frontend) |
 
 ## Quick start
@@ -103,16 +108,62 @@ Full OpenAPI spec: [api.helical.manumustudio.com/docs](https://api.helical.manum
 ```bash
 # Backend
 cd backend
-uv venv --python 3.11 .venv && source .venv/bin/activate
-uv pip install -e ".[dev]"
+uv venv --python 3.11 && source .venv/bin/activate
+uv sync --frozen
+cp .env.example .env  # fill in Neon URLs
+alembic upgrade head
+python -m app.scripts.seed_datasets
 uvicorn app.main:app --reload --port 8000
 
 # Frontend (separate terminal)
 cd frontend
 corepack enable && pnpm install
-echo "NEXT_PUBLIC_BACKEND_URL=http://localhost:8000" > .env.local
+echo 'NEXT_PUBLIC_BACKEND_URL=http://localhost:8000' > .env.local
 pnpm dev
 ```
+
+## Project structure
+
+```
+backend/
+  app/
+    api/v1/          # FastAPI route handlers
+    services/        # ParquetStore, ParquetReader
+    schemas/         # Pydantic request/response models
+    scripts/         # Dataset seeding, precompute utilities
+  tests/             # pytest suite
+  data/parquet/      # Local parquet fallback
+
+frontend/
+  app/
+    (public)/        # Landing page (scroll showcase)
+    dashboard/       # Main dashboard with 4 analysis tabs
+  components/
+    AppHeader/       # Shared header (landing + dashboard)
+    ReferenceView/   # Healthy PBMC atlas tab
+    ProjectionView/  # COVID projection tab
+    DistanceView/    # Distance heatmap + scatter tab
+    DisagreementView/  # Cross-model comparison tab
+    landing/         # Landing page sections
+    ui/              # shadcn primitives
+  lib/
+    stores/          # Zustand selection store
+    plotly/          # Plotly theme + hooks
+    schemas/         # Zod validation schemas
+```
+
+## Architecture decisions
+
+Key decisions are documented in [`docs/research/DECISIONS.md`](docs/research/DECISIONS.md):
+
+- **Reference mapping over fine-tuning** — project disease into healthy space rather than retrain
+- **Parquet over live inference** — precompute embeddings in Colab, serve as static artifacts
+- **S3 with local fallback** — resilient reads without hard S3 dependency
+- **Dual ORM** — SQLModel (backend) + Prisma (frontend) on non-overlapping tables
+
+## Built by
+
+[ManuMu Studio](https://manumustudio.com) — powered by [Helical AI](https://helical.bio) foundation models.
 
 ## License
 
