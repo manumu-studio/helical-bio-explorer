@@ -120,7 +120,7 @@ export function DisagreementView({ onSourceChange }: DisagreementViewProps) {
       <FilterSidebar
         activeTab="disagreement"
         datasetLabel="COVID-19 (Wilk) cross-model"
-        modelLabel="geneformer × genept"
+        modelLabel="Geneformer × GenePT"
         showModelToggle={false}
         cellTypeCounts={cellTypeCounts}
         showConditionFilter
@@ -151,7 +151,7 @@ export function DisagreementView({ onSourceChange }: DisagreementViewProps) {
           </div>
         ) : null}
         {viewState.status === "not_found" ? (
-          <DashboardEmptyState viewName="Disagreement" dataset="covid_wilk" model="geneformer × genept" />
+          <DashboardEmptyState viewName="Disagreement" dataset="covid_wilk" model="Geneformer × GenePT" />
         ) : null}
         {viewState.status === "ready" && data !== null && traces.length > 0 ? (
           <>

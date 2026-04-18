@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils/cn";
 import type { ThemeToggleProps } from "./ThemeToggle.types";
 import { useThemeToggle } from "./useThemeToggle";
 
-export function ThemeToggle({ className }: ThemeToggleProps) {
+export function ThemeToggle({ className, onMouseEnter, onMouseLeave }: ThemeToggleProps) {
   const { isDark, mounted, prefersReducedMotion, toggle } = useThemeToggle();
 
   if (!mounted) {
@@ -24,6 +24,8 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
     <button
       type="button"
       onClick={toggle}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       className={cn(
         "inline-flex h-8 w-8 items-center justify-center rounded-md",
         "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
