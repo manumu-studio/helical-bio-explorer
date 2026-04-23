@@ -5,6 +5,7 @@ Thumbs.db
 # Local agent / editor folders (not committed)
 .claude/
 .cursor/
+.playwright-mcp/
 
 # Python
 __pycache__/
