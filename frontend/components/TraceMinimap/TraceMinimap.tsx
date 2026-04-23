@@ -1,15 +1,25 @@
-// Collapsible sidebar listing every request-trace span — outbound then return.
+// Collapsible sidebar listing every span in a trace. Purely presentational —
+// the caller hands in an array of items, each with optional section-header /
+// divider inserts that should render immediately above the row.
 
-import {
-  CHECKPOINTS,
-  ENV_CONFIG,
-  TURNAROUND_STEP,
-  getDisplayInfo,
-} from "@/lib/request-trace";
+import type {
+  TraceMinimapDivider,
+  TraceMinimapInsert,
+  TraceMinimapProps,
+  TraceMinimapSectionHeader,
+} from "./TraceMinimap.types";
 
-import type { TraceMinimapProps } from "./TraceMinimap.types";
+const DEFAULT_HEADER = "Span Map";
 
-export function TraceMinimap({ currentStep, onGoTo, collapsed, onToggle }: TraceMinimapProps) {
+export function TraceMinimap({
+  items,
+  currentStep,
+  onGoTo,
+  collapsed,
+  onToggle,
+  headerLabel = DEFAULT_HEADER,
+  initialSectionHeader,
+}: TraceMinimapProps) {
   return (
     <div className="hidden max-h-[90vh] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-2 shadow-sm lg:block">
       <button
@@ -21,7 +31,7 @@ export function TraceMinimap({ currentStep, onGoTo, collapsed, onToggle }: Trace
         <span className="text-sm" aria-hidden>🗺️</span>
         {collapsed ? null : (
           <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-            Span Map
+            {headerLabel}
           </span>
         )}
         <span
@@ -32,49 +42,25 @@ export function TraceMinimap({ currentStep, onGoTo, collapsed, onToggle }: Trace
       </button>
 
       <div className="space-y-0.5">
-        {collapsed ? null : (
+        {initialSectionHeader !== undefined && !collapsed ? (
           <div className="px-2 pb-1 pt-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-              → Outbound — asking
+              {initialSectionHeader}
             </span>
           </div>
-        )}
+        ) : null}
 
-        {CHECKPOINTS.map((cp, i) => {
-          const envConf = ENV_CONFIG[cp.environment];
-          const isActive = i === currentStep;
-          const isPast = i < currentStep;
-          const display = getDisplayInfo(cp.step);
+        {items.map((item) => {
+          const isActive = item.stepIndex === currentStep;
+          const isPast = item.stepIndex < currentStep;
 
           return (
-            <span key={cp.step}>
-              {i === TURNAROUND_STEP ? (
-                collapsed ? (
-                  <div className="my-1 flex justify-center">
-                    <span className="text-[10px] text-amber-500 dark:text-amber-400">⟳</span>
-                  </div>
-                ) : (
-                  <div className="my-2 flex items-center gap-2 px-2">
-                    <div className="h-px flex-1 bg-amber-500/40" />
-                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
-                      ⟳ TURNAROUND
-                    </span>
-                    <div className="h-px flex-1 bg-amber-500/40" />
-                  </div>
-                )
-              ) : null}
-
-              {i === TURNAROUND_STEP && !collapsed ? (
-                <div className="px-2 pb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-                    ← Return — answering (7 steps)
-                  </span>
-                </div>
-              ) : null}
+            <span key={item.key}>
+              {item.insertsBefore.map((insert) => renderInsert(insert, collapsed))}
 
               <button
                 type="button"
-                onClick={() => { onGoTo(i); }}
+                onClick={() => { onGoTo(item.stepIndex); }}
                 className={`flex w-full items-center gap-2 rounded-lg py-1.5 text-left text-xs transition-colors ${
                   collapsed ? "justify-center px-0" : "px-2"
                 } ${
@@ -87,27 +73,58 @@ export function TraceMinimap({ currentStep, onGoTo, collapsed, onToggle }: Trace
               >
                 <span
                   className={`flex shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                    cp.direction === "return" ? "h-5 w-7 px-0.5" : "h-5 w-5"
+                    item.wideBadge ? "h-5 w-7 px-0.5" : "h-5 w-5"
                   } ${
                     isActive
-                      ? cp.direction === "return"
-                        ? "bg-amber-500 text-white dark:bg-amber-400 dark:text-black"
-                        : "bg-[var(--accent-indigo)] text-white"
+                      ? item.badgeActiveClass
                       : isPast
-                        ? `${envConf.surface} ${envConf.text}`
+                        ? `${item.badgePastSurfaceClass} ${item.badgePastTextClass}`
                         : "bg-[var(--bg-elevated)] text-[var(--text-secondary)]"
                   }`}
                 >
-                  {display.label}
+                  {item.label}
                 </span>
-                {collapsed ? null : (
-                  <span className="truncate">{cp.title.split(" — ")[0]}</span>
-                )}
+                {collapsed ? null : <span className="truncate">{item.title}</span>}
               </button>
             </span>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function renderInsert(insert: TraceMinimapInsert, collapsed: boolean) {
+  if (insert.kind === "divider") {
+    return renderDivider(insert, collapsed);
+  }
+  return renderSectionHeader(insert, collapsed);
+}
+
+function renderDivider(d: TraceMinimapDivider, collapsed: boolean) {
+  if (collapsed) {
+    return (
+      <div key={d.key} className="my-1 flex justify-center">
+        <span className={`text-[10px] ${d.colorTextClass}`}>{d.shortIcon}</span>
+      </div>
+    );
+  }
+  return (
+    <div key={d.key} className="my-2 flex items-center gap-2 px-2">
+      <div className={`h-px flex-1 ${d.colorLineClass}`} />
+      <span className={`text-[10px] font-bold ${d.colorTextClass}`}>{d.longLabel}</span>
+      <div className={`h-px flex-1 ${d.colorLineClass}`} />
+    </div>
+  );
+}
+
+function renderSectionHeader(h: TraceMinimapSectionHeader, collapsed: boolean) {
+  if (collapsed) return null;
+  return (
+    <div key={h.key} className="px-2 pb-1">
+      <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+        {h.label}
+      </span>
     </div>
   );
 }

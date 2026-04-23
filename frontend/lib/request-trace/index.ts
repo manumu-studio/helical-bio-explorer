@@ -1,5 +1,6 @@
 // Barrel export for request-trace data model.
 
+export { buildRequestTraceBars, buildRequestTraceMinimapItems } from "./build-bars";
 export { CHECKPOINTS } from "./checkpoints";
 export type {
   AdrReference,

@@ -1,58 +1,62 @@
-// Orchestrator for the request-trace visualization — owns layout, keyboard
-// shortcuts, and the state that threads together the extracted sub-components.
+// Orchestrator for the pipeline-trace visualization — owns layout, keyboard
+// shortcuts, and threads together the shared PACKET-07 components (TraceProgress,
+// TraceMinimap, RequestContextDisplay) with pipeline-specific data + the
+// pipeline-specific PipelineCheckpointCard detail panel.
 
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { CheckpointCard } from "@/components/CheckpointCard";
+import { PipelineCheckpointCard } from "@/components/PipelineCheckpointCard";
+import { PipelineTraceInfo } from "@/components/PipelineTraceInfo";
 import { RequestContextDisplay } from "@/components/RequestContextDisplay";
-import { RequestTraceInfo } from "@/components/RequestTraceInfo";
 import { TraceMinimap } from "@/components/TraceMinimap";
 import { TraceProgress } from "@/components/TraceProgress";
 import {
-  OUTBOUND_COUNT,
-  RETURN_COUNT,
-  TURNAROUND_STEP,
-  buildRequestTraceBars,
-  buildRequestTraceMinimapItems,
-  getDisplayInfo,
-} from "@/lib/request-trace";
+  PHASE_LABELS,
+  PHASE_SHORT_LABELS,
+  buildPipelineTraceBars,
+  buildPipelineTraceMinimapItems,
+} from "@/lib/pipeline-trace";
 
-import type { RequestTraceProps } from "./RequestTrace.types";
-import { useRequestTrace } from "./useRequestTrace";
+import type { PipelineTraceProps } from "./PipelineTrace.types";
+import { usePipelineTrace } from "./usePipelineTrace";
 
-export function RequestTrace({ className }: RequestTraceProps) {
+const ARTIFACT_TOOLTIP =
+  "Artifacts produced as the pipeline runs — each parquet, joblib, and provenance row is appended here as Colab and S3 steps complete.";
+
+export function PipelineTrace({ className }: PipelineTraceProps) {
   const {
     currentStep,
     checkpoint,
+    totalSteps,
     isFirst,
     isLast,
-    cumulativeBackpack,
-    backpackOpen,
+    currentPhase,
+    cumulativeArtifacts,
+    artifactsOpen,
     next,
     prev,
     goTo,
     reset,
-    toggleBackpack,
-  } = useRequestTrace();
+    toggleArtifacts,
+  } = usePipelineTrace();
 
   const [minimapCollapsed, setMinimapCollapsed] = useState(false);
-  const [contextCollapsed, setContextCollapsed] = useState(false);
+  const [artifactsCollapsed, setArtifactsCollapsed] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
 
-  // Toggles the context sidebar and guarantees the backpack is open on reveal.
-  const revealContext = useCallback(() => {
-    setContextCollapsed((prev) => {
+  // Toggles the artifact sidebar and guarantees the panel is expanded on reveal.
+  const revealArtifacts = useCallback(() => {
+    setArtifactsCollapsed((prev) => {
       const next = !prev;
-      if (!next && !backpackOpen) toggleBackpack();
+      if (!next && !artifactsOpen) toggleArtifacts();
       return next;
     });
-  }, [backpackOpen, toggleBackpack]);
+  }, [artifactsOpen, toggleArtifacts]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      // Don't swallow keystrokes while the user is typing in an input.
       if (e.target instanceof HTMLElement) {
         const tag = e.target.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA" || e.target.isContentEditable) return;
@@ -71,11 +75,10 @@ export function RequestTrace({ className }: RequestTraceProps) {
     return () => { window.removeEventListener("keydown", handleKeyDown); };
   }, [next, prev, reset]);
 
-  const headerDisplay = checkpoint !== null ? getDisplayInfo(checkpoint.step) : null;
-  const bars = useMemo(() => buildRequestTraceBars(), []);
-  const minimapItems = useMemo(() => buildRequestTraceMinimapItems(), []);
+  const bars = useMemo(() => buildPipelineTraceBars(), []);
+  const minimapItems = useMemo(() => buildPipelineTraceMinimapItems(), []);
 
-  if (checkpoint === null || headerDisplay === null) return null;
+  if (checkpoint === null || currentPhase === null) return null;
 
   return (
     <div
@@ -84,9 +87,9 @@ export function RequestTrace({ className }: RequestTraceProps) {
       <div className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 shadow-sm">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
           <h1 className="flex items-center gap-2.5 text-lg font-bold tracking-tight text-[var(--text-primary)]">
-            Request Trace
+            Pipeline Trace
             <span className="text-xs font-normal text-[var(--text-secondary)]">
-              {String(OUTBOUND_COUNT + RETURN_COUNT)} spans · click → render
+              {String(totalSteps)} spans · dataset → parquet
             </span>
             <button
               type="button"
@@ -99,16 +102,10 @@ export function RequestTrace({ className }: RequestTraceProps) {
             </button>
           </h1>
           <span className="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                currentStep < TURNAROUND_STEP
-                  ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                  : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-              }`}
-            >
-              {currentStep < TURNAROUND_STEP ? "→ Outbound" : "← Return"}
+            <span className="rounded-full bg-[var(--accent-indigo)]/10 px-2 py-0.5 text-xs font-medium text-[var(--accent-indigo)]">
+              {PHASE_SHORT_LABELS[currentPhase]}
             </span>
-            {headerDisplay.phaseLabel} · Step {String(headerDisplay.phaseStep)} of {String(headerDisplay.phaseTotal)}
+            {PHASE_LABELS[currentPhase]} · Step {String(currentStep + 1)} of {String(totalSteps)}
           </span>
         </div>
 
@@ -152,29 +149,29 @@ export function RequestTrace({ className }: RequestTraceProps) {
             onGoTo={goTo}
             collapsed={minimapCollapsed}
             onToggle={() => { setMinimapCollapsed((p) => !p); }}
-            initialSectionHeader="→ Outbound — asking"
+            headerLabel="Pipeline Map"
+            initialSectionHeader={PHASE_SHORT_LABELS["pbmc-reference"]}
           />
         </div>
 
         <div className="min-h-0 max-h-[90vh] flex-1 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6 shadow-sm">
-          <CheckpointCard
+          <PipelineCheckpointCard
             checkpoint={checkpoint}
-            currentStep={currentStep}
-            onRevealContext={revealContext}
+            onRevealArtifacts={revealArtifacts}
           />
         </div>
 
-        <div className={`shrink-0 transition-all duration-300 ${contextCollapsed ? "w-12" : "w-72"}`}>
-          {contextCollapsed ? (
+        <div className={`shrink-0 transition-all duration-300 ${artifactsCollapsed ? "w-12" : "w-72"}`}>
+          {artifactsCollapsed ? (
             <button
               type="button"
-              onClick={() => { setContextCollapsed(false); }}
+              onClick={() => { setArtifactsCollapsed(false); }}
               className="flex w-full flex-col items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] py-3 shadow-sm transition-colors hover:bg-[var(--bg-elevated)]"
-              aria-label="Expand Request Context"
+              aria-label="Expand Artifact Accumulator"
             >
-              <span className="text-sm" aria-hidden>🧭</span>
+              <span className="text-sm" aria-hidden>📦</span>
               <span className="text-[10px] font-bold text-[var(--text-secondary)]">
-                {cumulativeBackpack.length}
+                {cumulativeArtifacts.length}
               </span>
               <span className="text-[10px] text-[var(--text-secondary)]">›</span>
             </button>
@@ -182,23 +179,27 @@ export function RequestTrace({ className }: RequestTraceProps) {
             <div className="relative">
               <button
                 type="button"
-                onClick={() => { setContextCollapsed(true); }}
+                onClick={() => { setArtifactsCollapsed(true); }}
                 className="absolute -left-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--bg-base)] text-[10px] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
-                aria-label="Collapse Request Context"
+                aria-label="Collapse Artifact Accumulator"
               >
                 ‹
               </button>
               <RequestContextDisplay
-                entries={cumulativeBackpack}
-                isOpen={backpackOpen}
-                onToggle={toggleBackpack}
+                entries={cumulativeArtifacts}
+                isOpen={artifactsOpen}
+                onToggle={toggleArtifacts}
+                title="Artifact Accumulator"
+                emoji="📦"
+                tooltipText={ARTIFACT_TOOLTIP}
+                emptyText="Empty — pipeline not yet started"
               />
             </div>
           )}
         </div>
       </div>
 
-      <RequestTraceInfo open={infoOpen} onClose={() => { setInfoOpen(false); }} />
+      <PipelineTraceInfo open={infoOpen} onClose={() => { setInfoOpen(false); }} />
     </div>
   );
 }

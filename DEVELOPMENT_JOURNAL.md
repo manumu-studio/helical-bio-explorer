@@ -12,3 +12,4 @@ Short index of feature work. Each entry links to a journal note and, when applic
 | [Entry 06](docs/journal/ENTRY-06-frontend-reference-dashboard.md) | 2026-04-13 | Reference-mapping dashboard | [PR 0.5.0](docs/pull-requests/PR-0.5.0-reference-mapping-dashboard.md) |
 | [Entry 11](docs/journal/ENTRY-11-genept-disagreement.md) | 2026-04-16 | GenePT disagreement infrastructure | [PR 0.10.0](docs/pull-requests/PR-0.10.0-genept-disagreement.md) |
 | [Entry 16](docs/journal/ENTRY-16-request-trace.md) | 2026-04-23 | Request Trace visualization | [PR 0.15.0](docs/pull-requests/PR-0.15.0-request-trace.md) |
+| [Entry 17](docs/journal/ENTRY-17-pipeline-trace.md) | 2026-04-23 | Pipeline Trace visualization | [PR 0.16.0](docs/pull-requests/PR-0.16.0-pipeline-trace.md) |

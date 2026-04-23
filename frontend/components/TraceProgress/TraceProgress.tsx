@@ -1,48 +1,39 @@
-// Horizontal progress bar for the request trace — each segment is a clickable span.
+// Horizontal progress bar — purely presentational, driven by the `bars` prop.
+// The caller precomputes env-specific color classes, phase labels, and any
+// separator glyphs (turnaround marker for the request trace, phase dividers
+// for the pipeline trace).
 
 "use client";
 
 import { useState } from "react";
 
-import {
-  CHECKPOINTS,
-  ENV_CONFIG,
-  GITHUB_REPO,
-  TURNAROUND_STEP,
-  getDisplayInfo,
-} from "@/lib/request-trace";
-
 import type { TraceProgressProps } from "./TraceProgress.types";
 
-export function TraceProgress({ currentStep, totalSteps, onGoTo }: TraceProgressProps) {
+export function TraceProgress({ bars, currentStep, onGoTo }: TraceProgressProps) {
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
 
   return (
     <div className="flex items-center gap-0.5">
       <span className="mr-1 text-[10px] font-medium text-[var(--text-secondary)]">→</span>
 
-      {Array.from({ length: totalSteps }, (_, i) => {
-        const cp = CHECKPOINTS[i];
-        if (cp === undefined) return null;
-        const envConf = ENV_CONFIG[cp.environment];
+      {bars.map((bar, i) => {
         const isActive = i === currentStep;
         const isPast = i < currentStep;
-        const display = getDisplayInfo(cp.step);
-        const hasFile = cp.file !== null;
-        const githubUrl = hasFile ? `${GITHUB_REPO}/${cp.file}` : null;
 
         function handleBarClick() {
-          if (isActive && githubUrl !== null) {
-            window.open(githubUrl, "_blank", "noopener");
+          if (isActive && bar.href !== null) {
+            window.open(bar.href, "_blank", "noopener");
           } else if (!isActive) {
             onGoTo(i);
           }
         }
 
         return (
-          <span key={i} className="relative flex flex-1 items-center gap-0.5">
-            {i === TURNAROUND_STEP ? (
-              <span className="mx-0.5 text-[10px] text-amber-500 dark:text-amber-400">⟳</span>
+          <span key={bar.key} className="relative flex flex-1 items-center gap-0.5">
+            {bar.separatorBefore !== null ? (
+              <span className={`mx-0.5 text-[10px] ${bar.separatorBefore.colorClass}`}>
+                {bar.separatorBefore.icon}
+              </span>
             ) : null}
 
             <button
@@ -51,14 +42,14 @@ export function TraceProgress({ currentStep, totalSteps, onGoTo }: TraceProgress
               onMouseEnter={() => { setHoveredBar(i); }}
               onMouseLeave={() => { setHoveredBar(null); }}
               className="relative w-full cursor-pointer py-1.5"
-              aria-label={`Step ${display.label}: ${cp.title}`}
+              aria-label={bar.ariaLabel}
             >
               <div
                 className={`h-2 w-full rounded-full transition-all duration-300 ${
                   isActive
-                    ? `${envConf.barActive} scale-y-150 shadow-sm`
+                    ? `${bar.barActiveClass} scale-y-150 shadow-sm`
                     : isPast
-                      ? envConf.barPast
+                      ? bar.barPastClass
                       : "bg-[var(--border)]"
                 }`}
               />
@@ -69,22 +60,22 @@ export function TraceProgress({ currentStep, totalSteps, onGoTo }: TraceProgress
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-[var(--border)]" />
                 <div className="flex items-center gap-1.5">
                   {isActive ? <span className="text-emerald-500 dark:text-emerald-400">★</span> : null}
-                  <span className={`font-semibold ${envConf.text}`}>
-                    {display.phaseLabel} {display.label}
+                  <span className={`font-semibold ${bar.textClass}`}>
+                    {bar.phaseLabel} {bar.label}
                   </span>
                   <span className="text-[var(--text-secondary)]">·</span>
-                  <span className="text-[var(--text-primary)]">{cp.title.split(" — ")[0]}</span>
+                  <span className="text-[var(--text-primary)]">{bar.title}</span>
                 </div>
-                {hasFile ? (
+                {bar.file !== null ? (
                   <div className="mt-1 truncate font-mono text-[10px] text-[var(--text-secondary)]">
-                    {cp.file}
+                    {bar.file}
                   </div>
                 ) : null}
                 <div className={`mt-1.5 font-medium ${isActive ? "text-[var(--accent-indigo)]" : "text-[var(--text-secondary)]"}`}>
                   {isActive
-                    ? githubUrl !== null
+                    ? bar.href !== null
                       ? "Click to open in GitHub ↗"
-                      : "Network transit — no file"
+                      : bar.noFileHint
                     : "Click to jump →"}
                 </div>
               </div>
