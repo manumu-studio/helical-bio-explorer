@@ -1,5 +1,6 @@
-// Emerald panel showing the cumulative Request Context backpack, paired with
-// the per-step "Added to Request Context" button inside CheckpointCard.
+// Emerald panel showing a cumulative key/value accumulator — used by the
+// request trace ("Request Context" backpack) and the pipeline trace
+// ("Artifact Accumulator") with the same visual layout.
 
 "use client";
 
@@ -7,7 +8,21 @@ import { useState } from "react";
 
 import type { RequestContextDisplayProps } from "./RequestContextDisplay.types";
 
-export function RequestContextDisplay({ entries, isOpen, onToggle }: RequestContextDisplayProps) {
+const DEFAULT_TITLE = "Request Context";
+const DEFAULT_EMOJI = "🧭";
+const DEFAULT_TOOLTIP =
+  "Data accumulated as the request propagates through each span — grows from empty to the full payload needed for rendering.";
+const DEFAULT_EMPTY = "Empty — request not yet initiated";
+
+export function RequestContextDisplay({
+  entries,
+  isOpen,
+  onToggle,
+  title = DEFAULT_TITLE,
+  emoji = DEFAULT_EMOJI,
+  tooltipText = DEFAULT_TOOLTIP,
+  emptyText = DEFAULT_EMPTY,
+}: RequestContextDisplayProps) {
   const [showTooltip, setShowTooltip] = useState(false);
 
   return (
@@ -23,13 +38,13 @@ export function RequestContextDisplay({ entries, isOpen, onToggle }: RequestCont
           onMouseEnter={() => { setShowTooltip(true); }}
           onMouseLeave={() => { setShowTooltip(false); }}
         >
-          <span aria-hidden>🧭</span>
-          <span>Request Context</span>
+          <span aria-hidden>{emoji}</span>
+          <span>{title}</span>
           <span className="text-[var(--text-secondary)]">({entries.length})</span>
           {showTooltip ? (
             <span className="pointer-events-none absolute left-0 top-full z-50 mt-2 w-64 whitespace-normal rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-xs font-normal text-[var(--text-secondary)] shadow-xl">
               <span className="absolute bottom-full left-6 block border-4 border-transparent border-b-[var(--border)]" />
-              Data accumulated as the request propagates through each span — grows from empty to the full payload needed for rendering.
+              {tooltipText}
             </span>
           ) : null}
         </span>
@@ -42,7 +57,7 @@ export function RequestContextDisplay({ entries, isOpen, onToggle }: RequestCont
         <div className="border-t border-emerald-500/30 px-4 py-3">
           {entries.length === 0 ? (
             <p className="text-sm italic text-[var(--text-secondary)]">
-              Empty — request not yet initiated
+              {emptyText}
             </p>
           ) : (
             <dl className="space-y-1.5">
