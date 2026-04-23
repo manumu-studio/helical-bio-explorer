@@ -20,7 +20,7 @@ export function AppHeader({
   interactionHandlers,
 }: AppHeaderProps) {
   const { resolvedTheme, theme } = useTheme();
-  const effectiveTheme = resolvedTheme ?? theme ?? "dark";
+  const effectiveTheme = resolvedTheme ?? theme ?? "light";
   const logoSrc =
     effectiveTheme === "light" ? "/assets/logo-black.webp" : "/assets/logo-white.webp";
 

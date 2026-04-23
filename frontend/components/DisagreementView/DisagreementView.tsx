@@ -1,4 +1,4 @@
-// View 4: mean distance vs disagreement — one trace per cell type, lasso, three-column shell.
+// View 4: Geneformer distance vs GenePT distance — cells off the diagonal = model disagreement.
 
 "use client";
 
@@ -77,8 +77,8 @@ export function DisagreementView({ onSourceChange }: DisagreementViewProps) {
         type: "scattergl",
         mode: "markers",
         name: canon,
-        x: cells.map((c) => (c.distance_geneformer + c.distance_genept) / 2),
-        y: cells.map((c) => c.disagreement),
+        x: cells.map((c) => c.distance_geneformer),
+        y: cells.map((c) => c.distance_genept),
         text: cells.map((c) => c.cell_id),
         customdata: cells.map((c) => [
           c.disease_activity,
@@ -90,7 +90,7 @@ export function DisagreementView({ onSourceChange }: DisagreementViewProps) {
           size: cells.map((c) => (hoveredCellId === c.cell_id ? 11 : 6)),
           color,
         },
-        hovertemplate: `<b>%{text}</b><br>Type: ${canon}<br>Condition: %{customdata[0]}<br>GF: %{customdata[1]:.4f}<br>GenePT: %{customdata[2]:.4f}<br>Disagreement: %{customdata[3]:.4f}<extra></extra>`,
+        hovertemplate: `<b>%{text}</b><br>Type: ${canon}<br>Condition: %{customdata[0]}<br>GF dist: %{customdata[1]:.4f}<br>GenePT dist: %{customdata[2]:.4f}<br>Disagreement: %{customdata[3]:.4f}<extra></extra>`,
       });
     }
     if (unknown.length > 0) {
@@ -98,8 +98,8 @@ export function DisagreementView({ onSourceChange }: DisagreementViewProps) {
         type: "scattergl",
         mode: "markers",
         name: "Other",
-        x: unknown.map((c) => (c.distance_geneformer + c.distance_genept) / 2),
-        y: unknown.map((c) => c.disagreement),
+        x: unknown.map((c) => c.distance_geneformer),
+        y: unknown.map((c) => c.distance_genept),
         text: unknown.map((c) => c.cell_id),
         marker: {
           size: unknown.map((c) => (hoveredCellId === c.cell_id ? 11 : 6)),
@@ -158,9 +158,9 @@ export function DisagreementView({ onSourceChange }: DisagreementViewProps) {
             <div className="flex min-h-0 flex-1 flex-col">
               <UmapScatter
                 traces={traces}
-                title="Cross-model disagreement vs mean distance"
-                xLabel="Mean distance (GF + GenePT) / 2"
-                yLabel="Disagreement"
+                title="Geneformer vs GenePT — distance to healthy"
+                xLabel="Geneformer distance to healthy"
+                yLabel="GenePT distance to healthy"
                 onSelectedCellIds={setSelectedCellIds}
                 onClearSelection={clearSelection}
               />
@@ -183,9 +183,9 @@ export function DisagreementView({ onSourceChange }: DisagreementViewProps) {
               >
                 <p className="mb-1 font-medium text-[var(--text-primary)]">What you&apos;re seeing</p>
                 <p>
-                  Cross-model disagreement: X-axis is the average distance-to-healthy across Geneformer and GenePT;
-                  Y-axis is how much the two models disagree on that distance.
-                  High-disagreement cells are where model choice matters most.
+                  Each cell&apos;s distance to healthy measured by both models independently.
+                  X-axis is Geneformer&apos;s distance, Y-axis is GenePT&apos;s distance.
+                  Cells on the diagonal = models agree. Cells far off the diagonal = models disagree — those are worth investigating.
                 </p>
               </div>
             </div>

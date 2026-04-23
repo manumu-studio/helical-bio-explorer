@@ -11,7 +11,8 @@ import { cn } from "@/lib/utils/cn";
 import type { FeatureShowcaseProps } from "./FeatureShowcase.types";
 
 export function FeatureShowcase({ className }: FeatureShowcaseProps) {
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme, theme } = useTheme();
+  const effectiveTheme = resolvedTheme ?? theme ?? "light";
   return (
     <section className={cn("mx-auto max-w-6xl px-6 py-24", className)}>
       <h2 className="mb-16 text-center font-display text-3xl font-bold text-[var(--text-primary)]">
@@ -45,7 +46,7 @@ export function FeatureShowcase({ className }: FeatureShowcaseProps) {
               <div className="flex-1">
                 <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg-card)]/60 p-2 backdrop-blur-md">
                   <Image
-                    src={resolvedTheme === "light" ? card.imageLight : card.imageDark}
+                    src={effectiveTheme === "light" ? card.imageLight : card.imageDark}
                     alt={`${card.title} dashboard tab screenshot`}
                     width={600}
                     height={400}
