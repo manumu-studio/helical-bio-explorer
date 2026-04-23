@@ -40,6 +40,21 @@ body {
   color: var(--text-primary);
 }
 
+/* Tailwind v4 removed the default `cursor: pointer` on buttons. Restore it
+   for every interactive control app-wide, except while disabled. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
 /* Plotly mode bar — light canvas (matches white / slate-50 plot paper). */
 .js-plotly-plot .modebar-group {
   background-color: rgba(255, 255, 255, 0.92) !important;
